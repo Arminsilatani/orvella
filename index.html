@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <!-- :::::::::::::::::::::::::: META TAGS :::::::::::::::::::::::::: -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- :::::::::::::::::::::::::: SEO META :::::::::::::::::::::::::: -->
+    <title>Internal Link Manager dashboard | Orvella</title>
+    <meta name="description" content="In this dashboard, you can review internal link health, link density, anchor text distribution, and priority actions across your website.">
+    <meta name="robots" content="noindex, nofollow">
+
+    <!-- :::::::::::::::::::::::::: FAVICON & STYLES :::::::::::::::::::::::::: -->
+    <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+    <link rel="icon" type="image/x-icon" href="/assets/favicon.ico">
+    <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/icon-32.png">
+
+    <link rel="stylesheet" href="/assets/Orvella.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
+    <link rel="stylesheet" href="https://arminsilatani.github.io/tools/assets/sidebar.css">
+
+    <!-- :::::::::::::::::::::::::: RESOURCE HINTS :::::::::::::::::::::::::: -->
+    <!-- <link rel="preconnect" href="[FONT_OR_API_DOMAIN]" crossorigin> -->
+    <!-- <link rel="preload" href="[CRITICAL_RESOURCE_URL]" as="[style|script|font]"> -->
+
+    <!-- :::::::::::::::::::::::::: OPEN GRAPH :::::::::::::::::::::::::: -->
+
+    <!-- :::::::::::::::::::::::::: TWITTER CARD :::::::::::::::::::::::::: -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Orvella — Internal Link Manager">
+    <meta name="twitter:description" content="Plan, track, and balance internal links across your website pages.">
+    <meta name="twitter:image" content="[YOUR_ABSOLUTE_TWITTER_IMAGE_URL]">
+
+    <!-- :::::::::::::::::::::::::: CANONICAL & HREFLANG :::::::::::::::::::::::::: -->
+    <link rel="canonical" href="https://orvella.arminsilatani.com/">
+    <!-- <link rel="alternate" hreflang="[LANG_CODE]" href="[ABSOLUTE_URL_TO_ALT_VERSION]"> -->
+
+    <!-- :::::::::::::::::::::::::: SCHEMA :::::::::::::::::::::::::: -->
+    <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": "https://orvella.arminsilatani.com/#WebSite",
+      "url": "https://orvella.arminsilatani.com/",
+      "name": "Orvella",
+      "description": "Internal Link Manager by Armin Silatani.",
+      "inLanguage": "en",
+      "publisher": {
+        "@id": "https://orvella.arminsilatani.com/#Person"
+      }
+    },
+    {
+      "@type": "WebPage",
+      "@id": "https://orvella.arminsilatani.com/#WebPage",
+      "url": "https://orvella.arminsilatani.com/",
+      "name": "Internal Link Manager Dashboard | Orvella",
+      "headline": "Internal Link Manager Dashboard",
+      "description": "Monitor your website’s internal linking structure with reports on link balance, page coverage, orphan URLs, anchor text usage, and priority issues.",
+      "inLanguage": "en",
+      "isPartOf": {
+        "@id": "https://orvella.arminsilatani.com/#WebSite"
+      },
+      "author": {
+        "@id": "https://orvella.arminsilatani.com/#Person"
+      },
+      "about": {
+        "@id": "https://orvella.arminsilatani.com/#MainEntity"
+      },
+      "mainEntity": {
+        "@id": "https://orvella.arminsilatani.com/#MainEntity"
+      },
+      "breadcrumb": {
+        "@id": "https://orvella.arminsilatani.com/#BreadcrumbList"
+      }
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://orvella.arminsilatani.com/#MainEntity",
+      "name": "Orvella",
+      "alternateName": "Orvella Internal Link Manager",
+      "description": "Orvella is an internal link management tool that helps monitor internal linking structure through reports on link balance, page coverage, orphan URLs, anchor text usage, and priority issues.",
+      "url": "https://orvella.arminsilatani.com/",
+      "applicationCategory": "BusinessApplication",
+      "applicationSubCategory": "SEO and Internal Link Management Tool",
+      "operatingSystem": "Web",
+      "inLanguage": "en",
+      "image": "https://arminsilatani.com/images/favicon.png",
+      "author": {
+        "@id": "https://orvella.arminsilatani.com/#Person"
+      },
+      "creator": {
+        "@id": "https://orvella.arminsilatani.com/#Person"
+      },
+      "isAccessibleForFree": true
+    },
+    {
+      "@type": "Person",
+      "@id": "https://orvella.arminsilatani.com/#Person",
+      "name": "Armin Silatani",
+      "url": "https://arminsilatani.com/",
+      "image": "https://arminsilatani.com/images/favicon.png",
+      "jobTitle": "Digital Marketing Specialist",
+      "description": "Digital Marketing Specialist specializing in website design, professional SEO services, and Google Ads.",
+      "email": "contact@arminsilatani.com",
+      "telephone": "+989125759466",
+      "sameAs": [
+        "https://www.linkedin.com/in/arminsilatani/",
+        "https://github.com/Arminsilatani",
+        "https://www.instagram.com/arminsilatani",
+        "https://t.me/ArminSilatani",
+        "https://wa.me/+989125759466"
+      ]
+    },
+    {
+      "@type": "BreadcrumbList",
+      "@id": "https://orvella.arminsilatani.com/#BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Orvella",
+          "item": "https://orvella.arminsilatani.com/"
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "Internal Link Manager Dashboard",
+          "item": "https://orvella.arminsilatani.com/"
+        }
+      ]
+    }
+  ]
+}
+    </script>
+
+    <script src="/assets/supabase.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+    <script src="https://arminsilatani.github.io/tools/assets/sidebar-component.js" type="module" defer></script>
+    <script src="/assets/Orvella.js" defer></script>
+</head>
+
+<body>
+
+    <!-- :::::::::::::::::::::::::: LOADER :::::::::::::::::::::::::: -->
+    <div id="initial-loader" class="fullpage-loader">
+        <div class="lds-grid">
+            <div></div>
+            <div></div>
+            <div></div>
+            <div></div>
+            <div></div>
+            <div></div>
+            <div></div>
+            <div></div>
+            <div></div>
+        </div>
+    </div>
+
+    <!-- :::::::::::::::::::::::::: AUTH OVERLAY :::::::::::::::::::::::::: -->
+    <div id="auth-overlay" class="modal auth-overlay">
+        <div class="modal-content auth-modal-content">
+            <div id="auth-header" class="auth-header">
+                <img src="assets/Or.svg" alt="Orvella Logo" class="auth-logo">
+                <h1 class="auth-branding">Orvella Internal Link Manager</h1>
+                <p class="auth-subtitle">sign in to manage your internal links</p>
+            </div>
+            <div id="step-1" class="auth-step auth-step--active">
+                <input type="email" id="auth-email" class="auth-input" placeholder="Email address" autocomplete="email">
+                <p id="auth-error-1" class="auth-error hidden"></p>
+                <button id="auth-continue-btn" class="auth-btn auth-btn--primary">Continue</button>
+            </div>
+            <div id="step-2-login" class="auth-step">
+                <p id="login-email-display" class="auth-email-display"></p>
+                <input type="password" id="auth-password-login" class="auth-input" placeholder="Password" autocomplete="current-password">
+                <p id="auth-error-login" class="auth-error hidden"></p>
+                <div class="auth-row">
+                    <button id="auth-back-to-email" class="auth-btn auth-btn--secondary auth-btn--small">Back</button>
+                    <button id="auth-signin-btn" class="auth-btn auth-btn--primary">Sign In</button>
+                </div>
+                <p class="auth-link-row">Forgot password? <a href="#" id="forgot-link" class="auth-link">Reset</a></p>
+            </div>
+            <div id="step-2-register" class="auth-step">
+                <input type="email" id="register-email-display" class="auth-input" readonly>
+                <input type="text" id="auth-first-name" class="auth-input" placeholder="First Name">
+                <input type="text" id="auth-last-name" class="auth-input" placeholder="Last Name">
+                <input type="password" id="auth-password-register" class="auth-input" placeholder="Password (min 6 characters)" autocomplete="new-password">
+                <input type="password" id="auth-confirm-password" class="auth-input" placeholder="Confirm password">
+                <p id="auth-error-register" class="auth-error hidden"></p>
+                <div class="auth-row">
+                    <button id="auth-back-to-email-2" class="auth-btn auth-btn--secondary auth-btn--small">Back</button>
+                    <button id="auth-register-btn" class="auth-btn auth-btn--primary">Create Account</button>
+                </div>
+            </div>
+            <div id="step-forgot" class="auth-step">
+                <h3 class="auth-reset-title">Reset Password</h3>
+                <p class="auth-reset-desc">Enter your email to receive a reset link.</p>
+                <input type="email" id="forgot-email" class="auth-input" placeholder="Your email">
+                <p id="forgot-message" class="auth-forgot-message hidden"></p>
+                <div class="auth-row">
+                    <button id="auth-back-to-login" class="auth-btn auth-btn--secondary auth-btn--small">Back</button>
+                    <button id="auth-reset-btn" class="auth-btn auth-btn--primary">Send Reset Link</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- :::::::::::::::::::::::::: APP CONTAINER :::::::::::::::::::::::::: -->
+    <div id="app-container" class="app-hidden">
+
+        <!-- :::::::::::::::::::::::::: HEADER :::::::::::::::::::::::::: -->
+        <header class="glass-header">
+            <div class="header-container">
+                <div class="header-inner">
+                    <img src="assets/Or.svg" alt="Orvella Logo" class="header-logo">
+                    <div class="header-text">
+                        <h1 class="tool-name">Orvella</h1>
+                        <h2 class="tool-tagline">Internal Link Manager</h2>
+                    </div>
+                </div>
+                <p class="tool-description">Plan, track, and balance internal links across every page in your website.</p>
+            </div>
+        </header>
+
+        <!-- :::::::::::::::::::::::::: ADD PAGE MODAL :::::::::::::::::::::::::: -->
+        <div id="addPageModal" class="modal">
+            <div class="modal-content">
+                <span class="close-modal">&times;</span>
+                <div class="section-heading">
+                    <div>
+                        <span class="eyebrow">Add a page</span>
+                        <h2 id="addPageStepTitle">Step 1 of 3</h2>
+                        <p id="addPageStepDesc">Basic page information</p>
+                    </div>
+                </div>
+                <form id="pageForm" novalidate>
+                    <div class="form-step is-active" data-step="1">
+                        <div class="field-group">
+                            <span class="field-prefix">Page title:</span>
+                            <input id="pageTitle" name="pageTitle" type="text" maxlength="120" autocomplete="off">
+                        </div>
+                        <div class="field-group">
+                            <span class="field-prefix">Page URL:</span>
+                            <input id="pageUrl" name="pageUrl" type="text" maxlength="220" autocomplete="off">
+                        </div>
+                        <div class="field-group">
+                            <span class="field-prefix">Language:</span>
+                            <input id="addPageLanguage" type="text" autocomplete="off">
+                        </div>
+                        <div class="field-group">
+                            <span class="field-prefix">Tag(s):</span>
+                            <input id="tagsInput" name="tags" type="text" autocomplete="off">
+                        </div>
+                        <div class="field-group">
+                            <span class="field-prefix">Word count:</span>
+                            <input id="wordCount" name="wordCount" type="number" min="0" inputmode="numeric">
+                        </div>
+                    </div>
+                    <div class="form-step" data-step="2">
+                        <div class="field-group">
+                            <span class="field-prefix">Primary keyword:</span>
+                            <input id="primaryKeyword" name="primaryKeyword" type="text" maxlength="120" autocomplete="off">
+                        </div>
+                        <div class="field-group">
+                            <span class="field-prefix">Secondary keywords:</span>
+                            <textarea id="secondaryKeywords" name="secondaryKeywords" rows="4" maxlength="600"></textarea>
+                        </div>
+                        <div class="field-group">
+                            <span class="field-prefix">LSI keywords:</span>
+                            <textarea id="lsiKeywords" name="lsiKeywords" rows="3" maxlength="600"></textarea>
+                        </div>
+                    </div>
+                    <div class="form-step" data-step="3">
+                        <label class="global-check-label">
+                            <input type="checkbox" id="canLinkOutToggle" class="neon-checkbox-native" checked hidden>
+                            <span class="neon-dot-indicator" aria-hidden="true"></span>
+                            <span>Allow outbound links</span>
+                        </label>
+                        <label class="global-check-label">
+                            <input type="checkbox" id="canReceiveLinksToggle" class="neon-checkbox-native" checked hidden>
+                            <span class="neon-dot-indicator" aria-hidden="true"></span>
+                            <span>Allow incoming links</span>
+                        </label>
+                        <div class="field-group priority-field">
+                            <div class="priority-info">
+                                <label>Page importance</label>
+                                <p class="field-hint">Select priority – higher importance attracts more incoming links.</p>
+                            </div>
+                            <div class="priority-bar" id="prioritySelector">
+                                <button type="button" class="priority-option" data-value="1">Very low</button>
+                                <button type="button" class="priority-option" data-value="2">Low</button>
+                                <button type="button" class="priority-option is-active" data-value="3">Medium</button>
+                                <button type="button" class="priority-option" data-value="4">High</button>
+                                <button type="button" class="priority-option" data-value="5">Very high</button>
+                            </div>
+                            <input type="hidden" id="pagePriority" value="3">
+                            <div class="page-type-toggle">
+                                <span class="toggle-label toggle-label--actual">Actual Page</span>
+                                <div class="toggle-switch is-planned" id="pageTypeToggle">
+                                    <div class="toggle-knob"></div>
+                                </div>
+                                <span class="toggle-label toggle-label--planned">Planned Page</span>
+                                <input type="hidden" id="pageType" value="planned">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-step-nav">
+                        <button type="button" class="secondary-button" id="prevStepButton" hidden>Previous</button>
+                        <button type="button" class="primary-button" id="nextStepButton">Next</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- :::::::::::::::::::::::::: EDIT PAGE MODAL :::::::::::::::::::::::::: -->
+        <div id="editPageModal" class="modal">
+            <div class="modal-content edit-page-modal-content">
+                <span class="close-modal">&times;</span>
+                <div class="section-heading">
+                    <div>
+                        <span class="eyebrow">Edit Page</span>
+                        <h2 id="editPageTitle"></h2>
+                        <p>Update page details and manage outgoing link suggestions.</p>
+                    </div>
+                </div>
+                <div class="edit-page-form">
+                    <div class="field-group">
+                        <span class="field-prefix">Page title:</span>
+                        <input id="editPageTitleInput" type="text" maxlength="120">
+                    </div>
+                    <div class="field-group">
+                        <span class="field-prefix">Page URL:</span>
+                        <input id="editPageUrl" type="text" maxlength="220">
+                    </div>
+                    <div class="field-group">
+                        <span class="field-prefix">Language:</span>
+                        <input id="editLanguage" type="text" autocomplete="off">
+                    </div>
+                    <div class="field-group">
+                        <span class="field-prefix">Tag(s):</span>
+                        <input id="editTaxonomy" type="text" placeholder="Comma‑separated">
+                    </div>
+                    <div class="field-group">
+                        <span class="field-prefix">Word count:</span>
+                        <input id="editWordCount" type="number" min="0">
+                    </div>
+                    <div class="field-group">
+                        <span class="field-prefix">Primary keyword:</span>
+                        <input id="editPrimaryKeyword" type="text" maxlength="120">
+                    </div>
+                    <div class="field-group">
+                        <span class="field-prefix">Secondary keywords:</span>
+                        <textarea id="editSecondaryKeywords" rows="2"></textarea>
+                    </div>
+                    <div class="field-group">
+                        <span class="field-prefix">LSI keywords:</span>
+                        <textarea id="editLsiKeywords" rows="2"></textarea>
+                    </div>
+                    <fieldset class="toggle-set">
+                        <legend>Linking permissions</legend>
+                        <label class="global-check-label">
+                            <input type="checkbox" id="editCanLinkOut" class="neon-checkbox-native" checked hidden>
+                            <span class="neon-dot-indicator" aria-hidden="true"></span>
+                            <span>Allow outbound links</span>
+                        </label>
+                        <label class="global-check-label">
+                            <input type="checkbox" id="editCanReceiveLinks" class="neon-checkbox-native" checked hidden>
+                            <span class="neon-dot-indicator" aria-hidden="true"></span>
+                            <span>Allow incoming links</span>
+                        </label>
+                    </fieldset>
+                    <div class="field-group priority-field">
+                        <div class="priority-info">
+                            <label>Page importance</label>
+                        </div>
+                        <div class="priority-bar" id="editPrioritySelector">
+                            <button type="button" class="priority-option" data-value="1">Very low</button>
+                            <button type="button" class="priority-option" data-value="2">Low</button>
+                            <button type="button" class="priority-option" data-value="3">Medium</button>
+                            <button type="button" class="priority-option" data-value="4">High</button>
+                            <button type="button" class="priority-option" data-value="5">Very high</button>
+                        </div>
+                        <input type="hidden" id="editPagePriority" value="3">
+                        <div class="page-type-toggle">
+                            <span class="toggle-label toggle-label--actual">Actual Page</span>
+                            <div class="toggle-switch is-planned" id="editPageTypeToggle">
+                                <div class="toggle-knob"></div>
+                            </div>
+                            <span class="toggle-label toggle-label--planned">Planned Page</span>
+                            <input type="hidden" id="editPageType" value="planned">
+                        </div>
+                    </div>
+                </div>
+                <div class="suggestions-box">
+                    <h3 class="suggestions-title">Outbound Link Suggestions</h3>
+                    <div id="edit-recommendations-list"></div>
+                </div>
+                <div class="incoming-links-box" id="incoming-links-box">
+                    <h3 class="suggestions-title">Pages Linking to This Page</h3>
+                    <div class="table-wrapper" id="incoming-links-table-wrapper">
+                        <table class="incoming-links-table">
+                            <thead>
+                                <tr>
+                                    <th>URL</th>
+                                    <th>Tags</th>
+                                </tr>
+                            </thead>
+                            <tbody id="incoming-links-body"></tbody>
+                        </table>
+                    </div>
+                    <div class="empty-state" id="incoming-links-empty">
+                        <p>No pages link to this page.</p>
+                    </div>
+                </div>
+                <div class="form-step-nav edit-actions-row">
+                    <button class="secondary-button delete-page-btn" id="deletePageBtn">Delete</button>
+                    <button class="primary-button" id="saveEditPageBtn">
+                        <span class="button-label">Update Page</span>
+                        <span class="button-loader" aria-hidden="true"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- :::::::::::::::::::::::::: SETTINGS MODAL :::::::::::::::::::::::::: -->
+        <div id="settingsModal" class="modal">
+            <div class="modal-content">
+                <span class="close-modal">&times;</span>
+                <div class="section-heading">
+                    <div>
+                        <span class="eyebrow">Settings</span>
+                        <h2>Anchor text distribution</h2>
+                        <p>Define the ideal percentage of incoming links using each keyword type.</p>
+                    </div>
+                </div>
+                <div class="field-group">
+                    <span class="field-prefix">Primary keyword:</span>
+                    <input id="settingsPrimaryPercent" type="number" min="1" max="100" value="35" inputmode="numeric">
+                </div>
+                <div class="field-group">
+                    <span class="field-prefix">Secondary keywords:</span>
+                    <input id="settingsSecondaryPercent" type="number" min="1" max="100" value="45" inputmode="numeric">
+                </div>
+                <div class="field-group">
+                    <span class="field-prefix">LSI keywords:</span>
+                    <input id="settingsLsiPercent" type="number" min="1" max="100" value="20" inputmode="numeric">
+                </div>
+                <!-- :::::::::::::::::::::::::: LANGUAGES :::::::::::::::::::::::::: -->
+                <div class="section-heading" style="margin-top: 28px;">
+                    <div>
+                        <span class="eyebrow">Languages</span>
+                        <h2>Site Languages</h2>
+                        <p>Add languages used on your website for content and tagging.</p>
+                    </div>
+                </div>
+                <div class="field-group">
+                    <input type="text" id="newLanguageInput" placeholder="Add a language..." autocomplete="off">
+                </div>
+                <div id="languagesListContainer" class="tags-list"></div>
+                <div class="section-heading manage-tags-heading">
+                    <div>
+                        <span class="eyebrow">Manage Tags</span>
+                        <h2>Available Tags</h2>
+                        <p>Type a tag and press Enter to add it. Click Edit or Delete on any existing tag.</p>
+                    </div>
+                </div>
+                <div class="field-group">
+                    <input type="text" id="newTagInput" placeholder="Add a tag..." autocomplete="off">
+                </div>
+                <div id="tagsListContainer" class="tags-list"></div>
+                <button class="secondary-button" id="saveDistributionButton" type="button">
+                    <span class="button-label">Save</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- :::::::::::::::::::::::::: PAGES LIST MODAL :::::::::::::::::::::::::: -->
+        <div id="pagesListModal" class="modal">
+            <div class="modal-content pages-list-modal-content">
+                <span class="close-modal">&times;</span>
+                <div class="section-heading">
+                    <div>
+                        <span class="eyebrow">Page Inventory</span>
+                        <h2>
+                            <span id="pagesTabActual" class="pages-tab-link active">Your Pages</span>
+                            <span class="pages-tab-separator"> / </span>
+                            <span id="pagesTabPlanned" class="pages-tab-link">Your Planned Pages</span>
+                        </h2>
+                        <p>All pages currently tracked by Orvella.</p>
+                    </div>
+                </div>
+                <div class="table-wrapper">
+                    <table class="pages-table">
+                        <thead>
+                            <tr>
+                                <th>Title</th>
+                                <th>Word Count</th>
+                                <th>Outbound</th>
+                                <th>Incoming</th>
+                                <th>Tags</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pages-list-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- :::::::::::::::::::::::::: MAIN CONTENT :::::::::::::::::::::::::: -->
+        <main class="app-shell">
+            <svg width="0" height="0" class="gradient-defs">
+                <defs>
+                    <linearGradient id="gradient-health" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stop-color="#ff6b6b" />
+                        <stop offset="50%" stop-color="#ffe76d" />
+                        <stop offset="100%" stop-color="#4ecdc4" />
+                    </linearGradient>
+                    <linearGradient id="gradient-strategy" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stop-color="#ff6b6b" />
+                        <stop offset="50%" stop-color="#ffe76d" />
+                        <stop offset="100%" stop-color="#4ecdc4" />
+                    </linearGradient>
+                    <linearGradient id="gradient-density" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stop-color="#ff6b6b" />
+                        <stop offset="25%" stop-color="#ffe76d" />
+                        <stop offset="50%" stop-color="#4ecdc4" />
+                        <stop offset="75%" stop-color="#ffe76d" />
+                        <stop offset="100%" stop-color="#ff6b6b" />
+                    </linearGradient>
+                </defs>
+            </svg>
+
+            <section class="overview-row">
+                <div class="gauge-card" data-gauge-type="health">
+                    <div class="card-header">
+                        <span class="card-label">Internal Link Health</span>
+                        <p class="card-desc"></p>
+                    </div>
+                    <div class="gauge-container">
+                        <svg class="gauge" viewBox="0 0 140 90">
+                            <path d="M 20 70 A 50 50 0 0 1 120 70" class="gauge-track"/>
+                            <path d="M 20 70 A 50 50 0 0 1 120 70" class="gauge-segment gauge-segment-1"/>
+                            <path d="M 20 70 A 50 50 0 0 1 120 70" class="gauge-segment gauge-segment-2"/>
+                            <path d="M 20 70 A 50 50 0 0 1 120 70" class="gauge-segment gauge-segment-3"/>
+                            <path d="M 20 70 A 50 50 0 0 1 120 70" class="gauge-fill"/>
+                            <path d="M 66 70 A 4 4 0 0 1 74 70 L 70.75 10 A 0.75 0.75 0 0 1 69.25 10 Z" class="gauge-needle"/>
+                            <circle cx="70" cy="70" r="5" class="gauge-pivot"/>
+                        </svg>
+                        <div class="gauge-status"></div>
+                    </div>
+                    <div class="gauge-details"></div>
+                </div>
+                <div class="gauge-card" data-gauge-type="density">
+                    <div class="card-header">
+                        <span class="card-label">Link Density</span>
+                        <p class="card-desc"></p>
+                    </div>
+                    <div class="gauge-container">
+                        <svg class="gauge" viewBox="0 0 140 90">
+                            <path d="M 20 70 A 50 50 0 0 1 120 70" class="gauge-track"/>
+                            <path d="M 20 70 A 50 50 0 0 1 120 70" class="gauge-segment gauge-segment-1"/>
+                            <path d="M 20 70 A 50 50 0 0 1 120 70" class="gauge-segment gauge-segment-2"/>
+                            <path d="M 20 70 A 50 50 0 0 1 120 70" class="gauge-segment gauge-segment-3"/>
+                            <path d="M 20 70 A 50 50 0 0 1 120 70" class="gauge-segment gauge-segment-4"/>
+                            <path d="M 20 70 A 50 50 0 0 1 120 70" class="gauge-segment gauge-segment-5"/>
+                            <path d="M 66 70 A 4 4 0 0 1 74 70 L 70.75 10 A 0.75 0.75 0 0 1 69.25 10 Z" class="gauge-needle"/>
+                            <circle cx="70" cy="70" r="5" class="gauge-pivot"/>
+                        </svg>
+                        <div class="gauge-status"></div>
+                    </div>
+                    <div class="gauge-details"></div>
+                </div>
+                <div class="gauge-card" data-gauge-type="strategy">
+                    <div class="card-header">
+                        <span class="card-label">Anchor Strategy Fit</span>
+                        <p class="card-desc"></p>
+                    </div>
+                    <div class="gauge-container">
+                        <svg class="gauge" viewBox="0 0 140 90">
+                            <path d="M 20 70 A 50 50 0 0 1 120 70" class="gauge-track"/>
+                            <path d="M 20 70 A 50 50 0 0 1 120 70" class="gauge-segment gauge-segment-1"/>
+                            <path d="M 20 70 A 50 50 0 0 1 120 70" class="gauge-segment gauge-segment-2"/>
+                            <path d="M 20 70 A 50 50 0 0 1 120 70" class="gauge-segment gauge-segment-3"/>
+                            <path d="M 20 70 A 50 50 0 0 1 120 70" class="gauge-fill"/>
+                            <path d="M 66 70 A 4 4 0 0 1 74 70 L 70.75 10 A 0.75 0.75 0 0 1 69.25 10 Z" class="gauge-needle"/>
+                            <circle cx="70" cy="70" r="5" class="gauge-pivot"/>
+                        </svg>
+                        <div class="gauge-status"></div>
+                    </div>
+                    <div class="gauge-details"></div>
+                </div>
+            </section>
+
+            <div class="distribution-row">
+                <div class="distribution-anchor">
+                    <div class="panel-header">
+                        <h3 class="panel-title">Anchor Text Distribution</h3>
+                    </div>
+                    <div class="anchor-bar" id="anchor-bar"></div>
+                    <div class="top-keywords" id="top-keywords"></div>
+                </div>
+                <div class="distribution-top-pages">
+                    <div class="panel-header">
+                        <h3 class="panel-title">Top Linked Pages</h3>
+                    </div>
+                    <div class="table-wrapper">
+                        <table class="top-pages-table">
+                            <thead>
+                                <tr>
+                                    <th>Page URL</th>
+                                    <th>Link Count</th>
+                                    <th>% of Total Links</th>
+                                </tr>
+                            </thead>
+                            <tbody id="top-pages-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="dashboard-wrapper">
+                <div class="dashboard-panels">
+                    <div class="priority-actions" id="priority-actions-panel">
+                        <div class="panel-header">
+                            <h3 class="panel-title">Priority Actions</h3>
+                            <span class="panel-badge" id="priority-badge">0 issues</span>
+                        </div>
+                        <div class="table-wrapper">
+                            <table class="actions-table">
+                                <thead>
+                                    <tr>
+                                        <th>Priority</th>
+                                        <th>Page</th>
+                                        <th>Issue</th>
+                                        <th>Recommendation</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="priority-actions-body"></tbody>
+                            </table>
+                        </div>
+                        <div class="empty-state">
+                            <p>No priority actions detected.</p>
+                        </div>
+                    </div>
+                    <div class="orphan-pages" id="orphan-pages-panel">
+                        <div class="panel-header">
+                            <h3 class="panel-title">Orphan Pages</h3>
+                            <span class="panel-badge" id="orphan-badge">0 orphans</span>
+                        </div>
+                        <div class="table-wrapper">
+                            <table class="orphan-table">
+                                <thead>
+                                    <tr>
+                                        <th>Page</th>
+                                        <th>Type</th>
+                                        <th>Importance</th>
+                                        <th>Outbound</th>
+                                        <th>Sources</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="orphan-pages-body"></tbody>
+                            </table>
+                        </div>
+                        <div class="empty-state">
+                            <p>No orphan pages found.</p>
+                        </div>
+                    </div>
+                    <div class="opportunity-pages" id="opportunities-panel">
+                        <div class="panel-header">
+                            <h3 class="panel-title">Internal Link Opportunities</h3>
+                            <span class="panel-badge" id="opportunity-badge">0 opportunities</span>
+                        </div>
+                        <div class="table-wrapper">
+                            <table class="opportunity-table">
+                                <thead>
+                                    <tr>
+                                        <th>Source Page</th>
+                                        <th>Suggested Anchor</th>
+                                        <th>Target Page</th>
+                                        <th>Score</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="opportunities-body"></tbody>
+                            </table>
+                        </div>
+                        <div class="empty-state">
+                            <p>No link opportunities found.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer class="footer">
+            <div class="footer-signature">
+                <a href="https://arminsilatani.com/en/" target="_blank" rel="noopener noreferrer" title="Armin Silatani | Official Website">
+                    <span class="crafted">crafted by</span>
+                    <img src="assets/ArminSilatani.svg" alt="Armin Silatani" class="signature">
+                </a>
+            </div>
+        </footer>
+
+        <sidebar-component current-app="Orvella">
+            <div slot="app-content"></div>
+        </sidebar-component>
+    </div>
+
+    <!-- :::::::::::::::::::::::::: CONFIRM DELETE MODAL :::::::::::::::::::::::::: -->
+    <div id="confirmDeleteModal" class="modal">
+        <div class="modal-content confirm-delete-content">
+            <p class="confirm-delete-text">Are you sure you want to permanently delete this page?</p>
+            <div class="auth-row confirm-delete-actions">
+                <button class="auth-btn auth-btn--secondary auth-btn--small" id="cancelDeleteBtn">Cancel</button>
+                <button class="auth-btn auth-btn--primary auth-btn--small" id="confirmDeleteBtn">Delete</button>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>
