@@ -1,4 +1,4 @@
-// assets/Orvella.js
+/* :::::::::::::::::::::::::: STATE & CONSTANTS :::::::::::::::::::::::::: */
 (async function () {
   "use strict";
 
@@ -147,7 +147,7 @@
   let editingPageId = null;
   let activePagesTab = "actual";
 
-  // ========== UTILITY FUNCTIONS ==========
+  /* :::::::::::::::::::::::::: UTILITY FUNCTIONS :::::::::::::::::::::::::: */
   function showGlobalLoader() {
     const loader = document.getElementById("initial-loader");
     if (loader) loader.classList.remove("hidden");
@@ -161,9 +161,11 @@
   function getPageById(id) {
     return state.pages.find((p) => p.id === id);
   }
+
   function createId() {
     return Date.now().toString(36) + Math.random().toString(36).slice(2, 9);
   }
+
   function parseKeywords(value) {
     return value
       .split(/[\n,]/)
@@ -174,6 +176,7 @@
           arr.findIndex((x) => normalizeTerm(x) === normalizeTerm(k)) === i,
       );
   }
+
   function normalizeUrl(value) {
     if (!value) return "";
     return /^https?:\/\//i.test(value)
@@ -182,6 +185,7 @@
         ? value
         : "/" + value;
   }
+
   function displayUrl(url) {
     if (!url) return "";
     let display = url;
@@ -194,28 +198,49 @@
     if (!display) display = "/";
     return display;
   }
+
   function isValidUrlPath(value) {
     return (
       /^https?:\/\/[^\s/$.?#].[^\s]*$/i.test(value) || /^\/[^\s]*$/.test(value)
     );
   }
+
   function normalizeTerm(value) {
-    return String(value)
-      .toLowerCase()
-      .replace(/[^\p{L}\p{N}\s-]/gu, "")
-      .replace(/\s+/g, " ")
-      .trim();
+    if (!value) return "";
+    return (
+      String(value)
+        .normalize("NFKC")
+        .toLowerCase()
+        // Convert half‑spaces and similar control characters to a regular space
+        .replace(/[\u200B-\u200D\uFEFF]/g, " ")
+        // Normalize Persian and Arabic letters
+        .replace(/[يى]/g, "ی")
+        .replace(/ك/g, "ک")
+        .replace(/[أإآٱ]/g, "ا")
+        .replace(/ة/g, "ه")
+        .replace(/ؤ/g, "و")
+        .replace(/ئ/g, "ی")
+        // Remove diacritics
+        .replace(/[\u064B-\u065F\u0670\u06D6-\u06ED]/g, "")
+        // Remove illegal characters – keep letters, numbers, spaces and hyphens
+        .replace(/[^\p{L}\p{N}\s-]/gu, "")
+        // Normalize whitespace
+        .replace(/\s+/g, " ")
+        .trim()
+    );
   }
+
   function isValidEmail(email) {
     const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return re.test(email);
   }
+
   function validateStep(step) {
     let isValid = true;
     let errorMessage = "";
 
     if (step === 1) {
-      // مرحله ۱: عنوان، URL، زبان، تعداد کلمات
+      // Step 1: Title, URL, Language, Word Count
       const title = elements.pageTitle.value.trim();
       const url = elements.pageUrl.value.trim();
       const language = elements.addPageLanguage.value.trim();
@@ -283,7 +308,7 @@
     return isValid;
   }
 
-  // ========== DOM ELEMENTS ==========
+  /* :::::::::::::::::::::::::: DOM ELEMENTS :::::::::::::::::::::::::: */
   const elements = {
     addPageModal: document.getElementById("addPageModal"),
     settingsModal: document.getElementById("settingsModal"),
@@ -350,7 +375,7 @@
     { title: "Step 3 of 3", desc: "Linking permissions & importance" },
   ];
 
-  // ========== SIDEBAR ==========
+  /* :::::::::::::::::::::::::: SIDEBAR :::::::::::::::::::::::::: */
   function getSidebarComponent() {
     if (!sidebarComponent) {
       sidebarComponent = document.querySelector("sidebar-component");
@@ -449,6 +474,7 @@
   function isLoggedIn() {
     return !!currentUser;
   }
+
   function requireLogin(actionDescription = "perform this action") {
     if (!isLoggedIn()) {
       alert(`Please sign in to ${actionDescription}. Use the sidebar menu.`);
@@ -457,7 +483,7 @@
     return true;
   }
 
-  // ========== STATE PERSISTENCE ==========
+  /* :::::::::::::::::::::::::: STATE PERSISTENCE :::::::::::::::::::::::::: */
   async function saveState() {
     if (!currentUser) return;
     if (saveTimeout) clearTimeout(saveTimeout);
@@ -610,7 +636,7 @@
     }
   }
 
-  // ========== AUTH FLOW ==========
+  /* :::::::::::::::::::::::::: AUTH FLOW :::::::::::::::::::::::::: */
   async function checkEmailExists(email) {
     const { data, error } = await supabase
       .from("profiles")
@@ -627,10 +653,18 @@
       .forEach((s) => s.classList.remove("auth-step--active"));
     document.getElementById(stepId).classList.add("auth-step--active");
   }
+
   function openModal(modal) {
     modal.style.display = "flex";
     document.body.classList.add("modal-open");
+    const scrollableContent = modal.querySelector(
+      ".modal-content, .auth-modal-content, .edit-page-modal-content, .pages-list-modal-content, .anchor-details-modal-content, .confirm-delete-content",
+    );
+    if (scrollableContent) {
+      scrollableContent.scrollTop = 0;
+    }
   }
+
   function closeModal(modal) {
     modal.style.display = "none";
     document.body.classList.remove("modal-open");
@@ -877,7 +911,7 @@
       });
   }
 
-  // ========== MODAL HELPERS ==========
+  /* :::::::::::::::::::::::::: MODAL HELPERS :::::::::::::::::::::::::: */
   function adjustModalPrefixes(modalElement) {
     if (!modalElement || modalElement.style.display === "none") return;
 
@@ -921,7 +955,7 @@
     });
   }
 
-  // ========== AUTOCOMPLETE ==========
+  /* :::::::::::::::::::::::::: AUTOCOMPLETE :::::::::::::::::::::::::: */
   function attachTagsAutocomplete(input) {
     if (!input) return;
 
@@ -1043,9 +1077,20 @@
     }
 
     const list = document.createElement("ul");
-    list.className = "autocomplete-list";
-    input.parentNode.appendChild(list);
+    list.className = "autocomplete-list autocomplete-glass";
+    document.body.appendChild(list); // placed outside modal structure
     let selectedIndex = -1;
+
+    function positionList() {
+      const rect = input.getBoundingClientRect();
+      list.style.position = "fixed";
+      list.style.top = rect.bottom + 4 + "px";
+      list.style.left = rect.left + "px";
+      list.style.width = rect.width + "px";
+      list.style.maxHeight = "200px";
+      list.style.overflowY = "auto";
+      list.style.zIndex = "9999";
+    }
 
     function show() {
       const value = input.value.trim();
@@ -1072,6 +1117,7 @@
         });
         list.appendChild(li);
       });
+      positionList();
       list.classList.add("active");
     }
 
@@ -1114,18 +1160,22 @@
       setTimeout(() => list.classList.remove("active"), 150),
     );
     input.addEventListener("keydown", navigate);
+    window.addEventListener("scroll", positionList, true);
+    window.addEventListener("resize", positionList);
 
     input._simpleAutocompleteCleanup = () => {
       input.removeEventListener("input", show);
       input.removeEventListener("focus", show);
       input.removeEventListener("blur", () => {});
       input.removeEventListener("keydown", navigate);
+      window.removeEventListener("scroll", positionList, true);
+      window.removeEventListener("resize", positionList);
       list.remove();
       input._simpleAutocompleteCleanup = null;
     };
   }
 
-  // ========== MODAL OPEN/CLOSE ==========
+  /* :::::::::::::::::::::::::: MODAL OPEN/CLOSE :::::::::::::::::::::::::: */
   function openAddPageModal() {
     if (!requireLogin("add pages")) return;
     openModal(elements.addPageModal);
@@ -1151,6 +1201,263 @@
     editingPageId = null;
   }
 
+  /* :::::::::::::::::::::::::: EDIT PAGE – INCOMING LINKS & HEALTH :::::::::::::::::::::::::: */
+  function getEligibleIncomingLinks(pageId) {
+    const observedLinks = getObservedLinks();
+    const pagesMap = Object.fromEntries(state.pages.map((p) => [p.id, p]));
+
+    return observedLinks.filter((rec) => {
+      const source = pagesMap[rec.sourceId];
+      const target = pagesMap[rec.targetId];
+      if (!source || !target) return false;
+      return (
+        rec.targetId === pageId && source.canLinkOut && target.canReceiveLinks
+      );
+    });
+  }
+
+  function calculateAnchorDistributionHealth(pageId) {
+    const page = state.pages.find((p) => p.id === pageId);
+    if (!page) return null;
+
+    if (!page.canReceiveLinks) {
+      return {
+        score: null,
+        status: "not_applicable",
+        reason: "incoming_links_disabled",
+        eligibleCount: 0,
+      };
+    }
+
+    const incomingLinks = getEligibleIncomingLinks(pageId);
+
+    if (incomingLinks.length === 0) {
+      return {
+        score: null,
+        status: "insufficient_data",
+        reason: "no_eligible_incoming_links",
+        eligibleCount: 0,
+      };
+    }
+
+    const categories = ["primary", "secondary", "lsi", "other"];
+    const distribution = state.anchorDistribution;
+
+    const counts = { primary: 0, secondary: 0, lsi: 0, other: 0 };
+    incomingLinks.forEach((rec) => {
+      const cat = classifyAnchorForLink(rec, state.pages);
+      counts[cat]++;
+    });
+
+    const total = incomingLinks.length;
+    const actualPct = {};
+    categories.forEach((c) => {
+      actualPct[c] = total ? (counts[c] / total) * 100 : 0;
+    });
+
+    const targetPct = {
+      primary: distribution.primary,
+      secondary: distribution.secondary,
+      lsi: distribution.lsi,
+      other:
+        100 -
+        (distribution.primary + distribution.secondary + distribution.lsi),
+    };
+    targetPct.other = Math.max(0, targetPct.other);
+
+    const weights = { primary: 1.4, secondary: 1.2, lsi: 1.0, other: 0.7 };
+    let totalWeight = 0;
+    let weightedDeviation = 0;
+    categories.forEach((c) => {
+      const deviation = Math.abs(actualPct[c] - targetPct[c]);
+      weightedDeviation += deviation * weights[c];
+      totalWeight += weights[c];
+    });
+
+    const avgDeviation = weightedDeviation / totalWeight;
+    const score = Math.max(0, Math.round(100 - avgDeviation));
+
+    let status;
+    if (score >= 90) status = "Excellent";
+    else if (score >= 75) status = "Healthy";
+    else if (score >= 55) status = "Needs Attention";
+    else status = "Critical";
+
+    return {
+      score,
+      status,
+      eligibleCount: total,
+      actualDistribution: actualPct,
+      targetDistribution: targetPct,
+    };
+  }
+
+  function calculateInternalLinkEquity(pageId) {
+    const pages = state.pages.filter(
+      (p) => (p.pageType || "actual") === "actual",
+    );
+    if (pages.length === 0) return null;
+
+    const page = pages.find((p) => p.id === pageId);
+    if (!page) return null;
+
+    // Manual importance weights
+    const importanceMap = { 1: 1, 2: 2, 3: 4, 4: 7, 5: 11 };
+    const importanceWeights = pages.map((p) => ({
+      id: p.id,
+      weight: importanceMap[p.priority] || 4,
+    }));
+    const weightById = Object.fromEntries(
+      importanceWeights.map((iw) => [iw.id, iw.weight]),
+    );
+
+    const observedLinks = getObservedLinks();
+    const outCount = {};
+    const inLinks = {};
+    const linkQuality = {};
+
+    // Anchor quality based on category
+    const anchorQualityMap = {
+      primary: 1.0,
+      secondary: 0.85,
+      lsi: 0.75,
+      other: 0.6,
+    };
+
+    observedLinks.forEach((rec) => {
+      const source = pages.find((p) => p.id === rec.sourceId);
+      const target = pages.find((p) => p.id === rec.targetId);
+      if (!source || !target) return;
+      if (!source.canLinkOut || !target.canReceiveLinks) return;
+
+      const key = `${rec.sourceId}->${rec.targetId}`;
+      const cat = classifyAnchorForLink(rec, state.pages);
+      linkQuality[key] = anchorQualityMap[cat] || 0.6;
+
+      if (!inLinks[rec.targetId]) inLinks[rec.targetId] = [];
+      inLinks[rec.targetId].push(rec.sourceId);
+
+      outCount[rec.sourceId] = (outCount[rec.sourceId] || 0) + 1;
+    });
+
+    if (!page.canReceiveLinks) {
+      return {
+        score: null,
+        status: "not_applicable",
+        reason: "incoming_links_disabled",
+      };
+    }
+
+    // PageRank iterative
+    const d = 0.85;
+    const N = pages.length;
+    let authority = {};
+    pages.forEach((p) => {
+      authority[p.id] = weightById[p.id] / 11;
+    });
+
+    for (let iter = 0; iter < 15; iter++) {
+      const newAuth = {};
+      let totalAuth = 0;
+      pages.forEach((p) => {
+        let sum = 0;
+        if (inLinks[p.id]) {
+          inLinks[p.id].forEach((srcId) => {
+            const sourceAuth = authority[srcId] || 0;
+            const importanceWeight = weightById[srcId] || 4;
+            const effOut = outCount[srcId] || 1;
+            const quality = linkQuality[`${srcId}->${p.id}`] || 0.6;
+            sum += (sourceAuth * importanceWeight * quality) / effOut;
+          });
+        }
+        newAuth[p.id] = 1 - d + d * sum;
+        totalAuth += newAuth[p.id];
+      });
+      // Normalization
+      if (totalAuth > 0) {
+        pages.forEach((p) => {
+          newAuth[p.id] = newAuth[p.id] / totalAuth;
+        });
+      }
+      authority = newAuth;
+    }
+
+    // Percentile calculation
+    const authValues = Object.values(authority).sort((a, b) => a - b);
+    const pageAuth = authority[pageId] || 0;
+    let rank = authValues.findIndex((v) => v >= pageAuth);
+    if (rank === -1) rank = authValues.length - 1;
+    const percentile = (rank / (authValues.length - 1)) * 100;
+
+    // Peer average
+    const sameImportancePages = pages.filter(
+      (p) => p.priority === page.priority && p.id !== pageId,
+    );
+    let peerAvg = null;
+    if (sameImportancePages.length > 0) {
+      const peerAuths = sameImportancePages.map((p) => authority[p.id] || 0);
+      peerAvg = peerAuths.reduce((a, b) => a + b, 0) / peerAuths.length;
+    }
+
+    let status = "Balanced";
+    if (peerAvg !== null && peerAvg > 0) {
+      const ratio = (pageAuth / peerAvg) * 100;
+      if (ratio < 70) status = "Underpowered";
+      else if (ratio > 120) status = "Over-concentrated";
+    } else {
+      // If no peers, compare against expected target
+      const expected = (weightById[pageId] / 11) * 100;
+      if (percentile < expected - 20) status = "Underpowered";
+      else if (percentile > expected + 20) status = "Over-concentrated";
+    }
+
+    return {
+      score: Math.round(percentile),
+      status,
+      percentile,
+      rawAuthority: pageAuth,
+      peerAverageScore: peerAvg
+        ? Math.round((peerAvg / Math.max(...authValues)) * 100)
+        : null,
+      importance: page.priority,
+      eligibleIncomingCount: inLinks[pageId] ? inLinks[pageId].length : 0,
+    };
+  }
+
+  function updateEditPageGauges(pageId) {
+    const anchorScoreEl = document.getElementById("editAnchorScore");
+    const anchorStatusEl = document.getElementById("editAnchorStatus");
+    const anchorDetailEl = document.getElementById("editAnchorDetail");
+    const equityScoreEl = document.getElementById("editEquityScore");
+    const equityStatusEl = document.getElementById("editEquityStatus");
+    const equityDetailEl = document.getElementById("editEquityDetail");
+
+    const anchorResult = calculateAnchorDistributionHealth(pageId);
+    if (!anchorResult || anchorResult.score === null) {
+      anchorScoreEl.textContent = "--";
+      anchorStatusEl.textContent =
+        anchorResult?.status === "not_applicable" ? "Disabled" : "No data";
+      anchorDetailEl.textContent = "";
+    } else {
+      anchorScoreEl.textContent = anchorResult.score + "%";
+      anchorStatusEl.textContent = anchorResult.status;
+      anchorDetailEl.textContent = `${anchorResult.eligibleCount} eligible links`;
+    }
+
+    const equityResult = calculateInternalLinkEquity(pageId);
+    if (!equityResult || equityResult.score === null) {
+      equityScoreEl.textContent = "--";
+      equityStatusEl.textContent =
+        equityResult?.status === "not_applicable" ? "Disabled" : "No data";
+      equityDetailEl.textContent = "";
+    } else {
+      equityScoreEl.textContent = equityResult.score + "%";
+      equityStatusEl.textContent = equityResult.status;
+      equityDetailEl.textContent = `Importance: ${["", "Very Low", "Low", "Medium", "High", "Very High"][equityResult.importance]}`;
+    }
+  }
+
+  /* :::::::::::::::::::::::::: EDIT PAGE MODAL :::::::::::::::::::::::::: */
   function openEditPageModal(pageId) {
     const page = state.pages.find((p) => p.id === pageId);
     if (!page) return;
@@ -1195,6 +1502,7 @@
     requestAnimationFrame(() => {
       adjustModalPrefixes(elements.editPageModal);
       renderIncomingLinks(pageId);
+      updateEditPageGauges(pageId);
     });
   }
 
@@ -1215,7 +1523,7 @@
     });
   }
 
-  // ========== EDIT PAGE: OUTBOUND SUGGESTIONS ==========
+  /* :::::::::::::::::::::::::: EDIT PAGE – OUTBOUND SUGGESTIONS :::::::::::::::::::::::::: */
   function renderEditRecommendations(pageId) {
     const container = document.getElementById("edit-recommendations-list");
     if (!container) return;
@@ -1234,26 +1542,39 @@
       const target = state.pages.find((p) => p.id === rec.targetId);
       const targetUrl = target ? target.url : "Unknown";
       const linkType = rec.linkType || "intent";
+      const isEditMode = rec.editMode === true;
+
       html += `
                 <div class="suggestion-item" data-rec-id="${rec.id}">
                     <div class="suggestion-row-full">
-                        <a href="${targetUrl}" class="page-link" target="_blank">${displayUrl(targetUrl)}</a>
-                        <button class="remove-rec-btn" data-rec-id="${rec.id}" title="Remove">✕</button>
+                        ${
+                          isEditMode
+                            ? `<input type="text" class="edit-target-url-input" value="${targetUrl}" placeholder="Page URL" data-rec-id="${rec.id}" />`
+                            : `<a href="${targetUrl}" class="page-link" target="_blank">${displayUrl(targetUrl)}</a>`
+                        }
+                        ${!isEditMode ? `<button class="remove-rec-btn" data-rec-id="${rec.id}" title="Remove">✕</button>` : ""}
                     </div>
                     <div class="suggestion-row-split">
                         <input type="text" class="anchor-input" value="${rec.anchorText || ""}" 
-                            placeholder="Anchor text" data-rec-id="${rec.id}">
+                            placeholder="Anchor text" data-rec-id="${rec.id}" ${isEditMode ? "" : "disabled"}>
                         <div class="link-type-bar" data-rec-id="${rec.id}">
                             <button type="button" class="link-type-option ${linkType === "observed" ? "is-active" : ""}" data-value="observed">Observed Link</button>
                             <button type="button" class="link-type-option ${linkType === "intent" ? "is-active" : ""}" data-value="intent">Link Intent</button>
                             <input type="hidden" class="link-type-value" value="${linkType}">
                         </div>
-                        <button class="duplicate-rec-btn" data-rec-id="${rec.id}" title="Duplicate">＋</button>
+                        <button class="edit-rec-btn" data-rec-id="${rec.id}" title="${isEditMode ? "Save" : "Edit"}">
+                            ${
+                              isEditMode
+                                ? `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>`
+                                : `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" /></svg>`
+                            }
+                        </button>
                     </div>
                 </div>
             `;
     });
 
+    // Permanent empty row for adding a new link
     html += `
             <div class="suggestion-item" id="add-rec-row">
                 <div class="suggestion-row-full">
@@ -1268,13 +1589,13 @@
                         <button type="button" class="link-type-option is-active" data-value="intent">Link Intent</button>
                         <input type="hidden" class="link-type-value" value="intent">
                     </div>
-                    <button class="duplicate-rec-btn" id="duplicate-add-btn" title="Duplicate">＋</button>
                 </div>
             </div>
         `;
 
     container.innerHTML = html;
 
+    // Remove a recommendation
     container.querySelectorAll(".remove-rec-btn").forEach((btn) => {
       btn.addEventListener("click", () => {
         const recId = btn.getAttribute("data-rec-id");
@@ -1282,21 +1603,7 @@
       });
     });
 
-    container
-      .querySelectorAll(".duplicate-rec-btn[data-rec-id]")
-      .forEach((btn) => {
-        btn.addEventListener("click", () => {
-          const recId = btn.getAttribute("data-rec-id");
-          const original = state.recommendations.find((r) => r.id === recId);
-          if (original) {
-            const newRec = { ...original, id: createId() };
-            state.recommendations.push(newRec);
-            saveState();
-            renderEditRecommendations(pageId);
-          }
-        });
-      });
-
+    // Link type toggle (Observed/Intent)
     container.querySelectorAll(".link-type-bar[data-rec-id]").forEach((bar) => {
       const recId = bar.getAttribute("data-rec-id");
       const hidden = bar.querySelector(".link-type-value");
@@ -1314,6 +1621,7 @@
       });
     });
 
+    // New row link type bar
     const newBar = document.getElementById("new-link-type-bar");
     if (newBar) {
       const hidden = newBar.querySelector(".link-type-value");
@@ -1327,69 +1635,121 @@
       });
     }
 
-    const duplicateAddBtn = document.getElementById("duplicate-add-btn");
-    if (duplicateAddBtn) {
-      duplicateAddBtn.addEventListener("click", () => {
-        const rawUrl = document.getElementById("new-rec-page")?.value.trim();
-        const anchorText = document
-          .getElementById("new-rec-anchor")
-          ?.value.trim();
-        const linkType =
-          document.querySelector("#new-link-type-bar .link-type-value")
-            ?.value || "intent";
+    // Edit / Save button
+    container.querySelectorAll(".edit-rec-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const recId = btn.getAttribute("data-rec-id");
+        const rec = state.recommendations.find((r) => r.id === recId);
+        if (!rec) return;
 
-        if (!rawUrl) {
-          showToast("Please enter a page URL first.");
-          return;
-        }
-
-        const url = normalizeUrl(rawUrl);
-        let targetPage = state.pages.find(
-          (p) => p.url.toLowerCase() === url.toLowerCase(),
-        );
-
-        if (linkType === "observed") {
-          if (!targetPage) {
-            showToast(
-              "Page not found. Observed Link requires an existing Actual Page.",
+        if (rec.editMode) {
+          // Save mode: apply the entered URL
+          const input = container.querySelector(
+            `.edit-target-url-input[data-rec-id="${recId}"]`,
+          );
+          if (input) {
+            const rawUrl = input.value.trim();
+            const url = normalizeUrl(rawUrl);
+            if (!url) {
+              showToast("Please enter a valid URL.");
+              return;
+            }
+            let targetPage = state.pages.find(
+              (p) => p.url.toLowerCase() === url.toLowerCase(),
             );
-            return;
+            if (!targetPage) {
+              // For intent links, create a temporary planned page
+              if (rec.linkType === "intent") {
+                targetPage = {
+                  id: createId(),
+                  title:
+                    url.replace(/^https?:\/\//, "").replace(/\/$/, "") ||
+                    "Untitled",
+                  url: url,
+                  primaryKeyword: "",
+                  secondaryKeywords: [],
+                  lsiKeywords: [],
+                  wordCount: 0,
+                  canLinkOut: true,
+                  canReceiveLinks: true,
+                  priority: 3,
+                  tags: [],
+                  pageType: "planned",
+                };
+                state.pages.push(targetPage);
+              } else {
+                showToast(
+                  "Page not found. Observed Link requires an existing Actual Page.",
+                );
+                return;
+              }
+            }
+            rec.targetId = targetPage.id;
           }
-          if ((targetPage.pageType || "actual") !== "actual") {
-            showToast(
-              "Cannot create Observed Link to a Planned Page. Convert it to Actual first.",
-            );
-            return;
-          }
-        }
-
-        if (!targetPage && linkType === "intent") {
-          targetPage = {
-            id: createId(),
-            title:
-              url.replace(/^https?:\/\//, "").replace(/\/$/, "") || "Untitled",
-            url: url,
-            primaryKeyword: "",
-            secondaryKeywords: [],
-            lsiKeywords: [],
-            wordCount: 0,
-            canLinkOut: true,
-            canReceiveLinks: true,
-            priority: 3,
-            tags: [],
-            pageType: "planned",
-          };
-          state.pages.push(targetPage);
+          rec.editMode = false;
           saveState();
-        }
-
-        if (targetPage) {
-          addManualRecommendation(pageId, targetPage.id, anchorText, linkType);
+          renderEditRecommendations(pageId);
+        } else {
+          // Enter edit mode
+          rec.editMode = true;
           renderEditRecommendations(pageId);
         }
       });
-    }
+    });
 
+    // Enter key on URL fields in edit mode
+    container.querySelectorAll(".edit-target-url-input").forEach((input) => {
+      attachSimpleAutocomplete(input, pageUrlSuggestions);
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          const recId = input.getAttribute("data-rec-id");
+          const rec = state.recommendations.find((r) => r.id === recId);
+          if (!rec) return;
+          const rawUrl = input.value.trim();
+          const url = normalizeUrl(rawUrl);
+          if (!url) {
+            showToast("Please enter a valid URL.");
+            return;
+          }
+          let targetPage = state.pages.find(
+            (p) => p.url.toLowerCase() === url.toLowerCase(),
+          );
+          if (!targetPage) {
+            if (rec.linkType === "intent") {
+              targetPage = {
+                id: createId(),
+                title:
+                  url.replace(/^https?:\/\//, "").replace(/\/$/, "") ||
+                  "Untitled",
+                url: url,
+                primaryKeyword: "",
+                secondaryKeywords: [],
+                lsiKeywords: [],
+                wordCount: 0,
+                canLinkOut: true,
+                canReceiveLinks: true,
+                priority: 3,
+                tags: [],
+                pageType: "planned",
+              };
+              state.pages.push(targetPage);
+            } else {
+              showToast(
+                "Page not found. Observed Link requires an existing Actual Page.",
+              );
+              return;
+            }
+          }
+          rec.targetId = targetPage.id;
+          rec.editMode = false;
+          saveState();
+          renderEditRecommendations(pageId);
+        }
+      });
+    });
+
+    // Update anchor text
     container.querySelectorAll(".anchor-input").forEach((input) => {
       input.addEventListener("input", () => {
         const recId = input.getAttribute("data-rec-id");
@@ -1400,6 +1760,7 @@
       });
     });
 
+    // Events for the new empty link row
     const pageInput = document.getElementById("new-rec-page");
     const anchorInput = document.getElementById("new-rec-anchor");
 
@@ -1410,9 +1771,7 @@
         if (e.key === "Enter") {
           const dropdown =
             pageInput.parentElement.querySelector(".autocomplete-list");
-          if (dropdown && dropdown.classList.contains("active")) {
-            return;
-          }
+          if (dropdown && dropdown.classList.contains("active")) return;
           e.preventDefault();
           const rawUrl = pageInput.value.trim();
           const url = normalizeUrl(rawUrl);
@@ -1500,9 +1859,9 @@
           `Source page not found for recommendation ${rec.id}, sourceId: ${rec.sourceId}`,
         );
         html += `<tr>
-                    <td><span class="page-link" style="color: var(--danger)">Unknown Page (ID: ${rec.sourceId})</span></td>
-                    <td>—</td>
-                </tr>`;
+                            <td><span class="page-link" style="color: var(--danger)">Unknown Page (ID: ${rec.sourceId})</span></td>
+                            <td>—</td>
+                        </tr>`;
       } else {
         const url = sourcePage.url;
         const tags =
@@ -1510,9 +1869,9 @@
             ? sourcePage.tags.join(", ")
             : "—";
         html += `<tr>
-                    <td><a href="${url}" class="page-link" target="_blank">${displayUrl(url)}</a></td>
-                    <td>${tags}</td>
-                </tr>`;
+                            <td><a href="${url}" class="page-link" target="_blank">${displayUrl(url)}</a></td>
+                            <td>${tags}</td>
+                        </tr>`;
       }
     });
 
@@ -1638,6 +1997,7 @@
     }
   }
 
+  /* :::::::::::::::::::::::::: SETTINGS :::::::::::::::::::::::::: */
   function openSettings() {
     openModal(elements.settingsModal);
     syncDistributionInputs();
@@ -1658,6 +2018,7 @@
     elements.settingsLsiPercent.value = state.anchorDistribution.lsi;
   }
 
+  /* :::::::::::::::::::::::::: TAGS MANAGEMENT :::::::::::::::::::::::::: */
   function renderTagsList() {
     const container = elements.tagsListContainer;
     if (!container) return;
@@ -1733,7 +2094,7 @@
     });
   }
 
-  // ========== LANGUAGES MANAGEMENT ==========
+  /* :::::::::::::::::::::::::: LANGUAGES MANAGEMENT :::::::::::::::::::::::::: */
   function renderLanguagesList() {
     const container = elements.languagesListContainer;
     if (!container) return;
@@ -1758,7 +2119,6 @@
     const value = input.value.trim();
     if (!value) return;
 
-    // Check if it's a valid language from the list
     if (!VALID_LANGUAGES.includes(value)) {
       showToast("Please select a language from the list.");
       return;
@@ -1837,6 +2197,7 @@
     showToast("Settings saved!");
   }
 
+  /* :::::::::::::::::::::::::: MULTI-STEP FORM :::::::::::::::::::::::::: */
   function goToStep(step) {
     currentStep = step;
     elements.formSteps.forEach((s) =>
@@ -1860,15 +2221,16 @@
 
     adjustModalPrefixes(elements.addPageModal);
   }
+
   function goToNextStep() {
     if (!validateStep(currentStep)) {
       return;
     }
-
     if (currentStep < totalSteps) {
       goToStep(currentStep + 1);
     }
   }
+
   function goToPrevStep() {
     if (currentStep > 1) goToStep(currentStep - 1);
   }
@@ -1877,25 +2239,21 @@
     event.preventDefault();
     if (!requireLogin("add pages")) return;
 
-    // ====== اعتبارسنجی مرحله‌ای ======
-    // مرحله ۱: اطلاعات پایه
+    // Step‑by‑step validation
     if (!validateStep(1)) {
       goToStep(1);
       return;
     }
-    // مرحله ۲: کلمات کلیدی (Primary Keyword الزامی)
     if (!validateStep(2)) {
       goToStep(2);
       return;
     }
-
-    // اطمینان از اینکه در مرحله آخر هستیم
     if (currentStep !== totalSteps) {
       showToast("Please complete all steps first.");
       return;
     }
 
-    // ====== دریافت مقادیر ======
+    // Gather values
     const title = elements.pageTitle.value.trim();
     const url = normalizeUrl(elements.pageUrl.value.trim());
     const tags = parseKeywords(elements.tagsInput.value);
@@ -1910,7 +2268,7 @@
     const priority = parseInt(elements.pagePriority.value, 10) || 3;
     const pageType = elements.pageType.value;
 
-    // ====== اعتبارسنجی نهایی (تکمیلی) ======
+    // Final supplemental validation
     if (!title || !url || !primaryKeywordVal) {
       showToast("Please fill in all required fields.");
       return;
@@ -1921,7 +2279,7 @@
       return;
     }
 
-    // ====== زبان ======
+    // Language
     const langValue = elements.addPageLanguage.value.trim();
     let langCode = null;
     if (langValue) {
@@ -1937,7 +2295,7 @@
       langCode = langValue.split(" - ")[0].toUpperCase();
     }
 
-    // ====== بررسی وجود صفحه با URL تکراری ======
+    // Duplicate URL check
     const normalizedUrl = url.toLowerCase();
     const existingActual = state.pages.find(
       (p) =>
@@ -1950,14 +2308,14 @@
         (p.pageType || "actual") === "planned",
     );
 
-    // ====== منطق تبدیل Planned → Actual ======
+    // Planned → Actual conversion logic
     if (pageType === "actual") {
       if (existingActual) {
         showToast("An Actual Page with this URL already exists.");
         return;
       }
       if (existingPlanned) {
-        // تبدیل صفحه Planned موجود به Actual
+        // Convert existing Planned Page to Actual
         Object.assign(existingPlanned, {
           title,
           url,
@@ -2008,7 +2366,7 @@
       });
 
       state.recommendations = buildRecommendations();
-      await saveStateNow(); // استفاده از saveStateNow به جای saveState برای ذخیره فوری
+      await saveStateNow(); // Immediate save instead of debounced
       closeAddPageModal();
       renderOverviewGauges();
       showToast("Page added successfully!");
@@ -2021,6 +2379,7 @@
     }
   }
 
+  /* :::::::::::::::::::::::::: RECOMMENDATION ENGINE :::::::::::::::::::::::::: */
   function getPageLanguage(page) {
     return page.language || null;
   }
@@ -2040,7 +2399,7 @@
     const intersection = new Set(
       [...sourceTopics].filter((t) => targetTopics.has(t)),
     );
-    if (intersection.size === 0) return 0; // hard gate already, but explicit
+    if (intersection.size === 0) return 0;
 
     const union = new Set([...sourceTopics, ...targetTopics]);
     const J = intersection.size / union.size;
@@ -2094,12 +2453,10 @@
         if (source.id === target.id) continue;
         if (existingLinks.has(`${source.id}:${target.id}`)) continue;
 
-        // Language gate
         const sourceLang = getPageLanguage(source);
         const targetLang = getPageLanguage(target);
         if (sourceLang && targetLang && sourceLang !== targetLang) continue;
 
-        // Topic relevance – hard gate if no shared topic tags
         const relation = computeRelationScore(source, target);
         if (relation === 0) continue;
 
@@ -2144,7 +2501,7 @@
       }
     }
 
-    // Anchor assignment (unchanged)
+    // Anchor assignment
     let primaryCount = 0,
       secondaryCount = 0,
       lsiCount = 0;
@@ -2254,6 +2611,33 @@
       .filter(Boolean);
   }
 
+  function classifyAnchorForLink(rec, pages) {
+    const targetPage = pages.find((p) => p.id === rec.targetId);
+    if (!targetPage) return "other";
+
+    const normalizedAnchor = normalizeTerm(rec.anchorText || "");
+    if (!normalizedAnchor) return "other";
+
+    const hasPrimary =
+      targetPage.primaryKeyword &&
+      normalizedAnchor.includes(normalizeTerm(targetPage.primaryKeyword));
+    const hasSecondary =
+      targetPage.secondaryKeywords &&
+      targetPage.secondaryKeywords.some((k) =>
+        normalizedAnchor.includes(normalizeTerm(k)),
+      );
+    const hasLsi =
+      targetPage.lsiKeywords &&
+      targetPage.lsiKeywords.some((k) =>
+        normalizedAnchor.includes(normalizeTerm(k)),
+      );
+
+    if (hasPrimary) return "primary";
+    if (hasSecondary) return "secondary";
+    if (hasLsi) return "lsi";
+    return "other";
+  }
+
   function getActualPages() {
     return state.pages.filter((p) => (p.pageType || "actual") === "actual");
   }
@@ -2264,7 +2648,7 @@
     );
   }
 
-  // ========== GAUGE CALCULATIONS ==========
+  /* :::::::::::::::::::::::::: GAUGE CALCULATIONS :::::::::::::::::::::::::: */
   const overviewCalculator = {
     computeDensityScore(pages, links) {
       const pagesWithOutbound = pages.filter((p) => p.canLinkOut);
@@ -2435,9 +2819,10 @@
         secondaryCount = 0,
         lsiCount = 0;
       links.forEach((link) => {
-        if (link.anchorType === "primary") primaryCount++;
-        else if (link.anchorType === "secondary") secondaryCount++;
-        else if (link.anchorType === "lsi") lsiCount++;
+        const type = classifyAnchorForLink(link, pages);
+        if (type === "primary") primaryCount++;
+        else if (type === "secondary") secondaryCount++;
+        else if (type === "lsi") lsiCount++;
       });
       const totalAnchorLinks = primaryCount + secondaryCount + lsiCount;
       const primaryPercent = totalAnchorLinks
@@ -2522,6 +2907,7 @@
     },
   };
 
+  /* :::::::::::::::::::::::::: RENDER FUNCTIONS :::::::::::::::::::::::::: */
   function updateGaugeDetails(card, detailsArray) {
     const detailsEl = card.querySelector(".gauge-details");
     if (!detailsEl) return;
@@ -2606,8 +2992,8 @@
     renderOrphanTable();
     renderDistributionRow();
     renderOpportunitiesTable();
-
     renderPlannedToConvertTable();
+
     if (window.innerWidth <= 768) {
       let slider = document.querySelector(".overview-row");
       if (slider) {
@@ -2671,6 +3057,7 @@
     if (score >= 40) return "Poor";
     return "Critical";
   }
+
   function getDensityStatus(density) {
     if (density < 0.5) return "Very Sparse";
     if (density < 0.8) return "Sparse";
@@ -2678,6 +3065,7 @@
     if (density <= 1.5) return "Dense";
     return "Overlinked";
   }
+
   function getStrategyStatus(score) {
     if (score >= 90) return "Excellent";
     if (score >= 75) return "Aligned";
@@ -2711,6 +3099,7 @@
     btn.classList.toggle("is-loading", isLoading);
   }
 
+  /* :::::::::::::::::::::::::: EVENT BINDING :::::::::::::::::::::::::: */
   function bindOrvellaEvents() {
     elements.prevStepButton.addEventListener("click", goToPrevStep);
     elements.pageForm.addEventListener("submit", handlePageSubmit);
@@ -2885,6 +3274,7 @@
       )
       .forEach((tbody) => {
         tbody.addEventListener("click", function (e) {
+          if (e.target.closest(".status-pill")) return;
           if (e.target.closest("a")) return;
 
           const row = e.target.closest("tr");
@@ -2898,7 +3288,7 @@
       });
   }
 
-  // ========== STATUS PILL GLOBAL LISTENER ==========
+  /* :::::::::::::::::::::::::: STATUS PILL GLOBAL LISTENER :::::::::::::::::::::::::: */
   document.addEventListener("click", (e) => {
     const pill = e.target.closest(".status-pill");
     if (!pill) {
@@ -2940,6 +3330,7 @@
     }
   });
 
+  /* :::::::::::::::::::::::::: TABLES / DATA :::::::::::::::::::::::::: */
   function getPotentialSourceCount(targetPage) {
     return state.pages.filter(
       (p) =>
@@ -3137,11 +3528,9 @@
         if (source.id === target.id) continue;
         if (existingLinks.has(`${source.id}:${target.id}`)) continue;
 
-        // Language gate – reject if both have a language and they differ
         const targetLang = getPageLanguage(target);
         if (sourceLang && targetLang && sourceLang !== targetLang) continue;
 
-        // Topic relevance – hard gate if no shared topic tags
         const R = computeRelationScore(source, target);
         if (R === 0) continue;
 
@@ -3150,7 +3539,6 @@
         if (projIn >= targetInbound) continue;
 
         const I = (target.priority - 1) / 4;
-
         const N = (targetInbound - projIn) / targetInbound;
 
         const score = (0.4 * R + 0.3 * I + 0.3 * N) * 100;
@@ -3227,13 +3615,13 @@
     let html = "";
     items.forEach((item) => {
       html += `<tr data-page-id="${item.page.id}">
-            <td><span class="page-link">${item.page.title}</span></td>
-            <td><a href="${item.page.url}" class="page-link" target="_blank">${displayUrl(item.page.url)}</a></td>
-            <td>${item.incomingCount}</td>
-            <td>
-                <button class="convert-btn" data-page-id="${item.page.id}">Convert to Observed</button>
-            </td>
-        </tr>`;
+                <td><span class="page-link">${item.page.title}</span></td>
+                <td><a href="${item.page.url}" class="page-link" target="_blank">${displayUrl(item.page.url)}</a></td>
+                <td>${item.incomingCount}</td>
+                <td>
+                    <button class="convert-btn" data-page-id="${item.page.id}">Convert to Observed</button>
+                </td>
+            </tr>`;
     });
     tbody.innerHTML = html;
 
@@ -3245,7 +3633,7 @@
 
     if (badge) badge.textContent = `${items.length} pages`;
 
-    // رویداد کلیک روی دکمه Convert
+    // Convert button listener
     tbody.querySelectorAll(".convert-btn").forEach((btn) => {
       btn.addEventListener("click", function (e) {
         e.stopPropagation();
@@ -3256,7 +3644,7 @@
       });
     });
 
-    // کلیک روی ردیف (غیر از دکمه) باز کردن ویرایشگر
+    // Row click opens editor (except button)
     tbody.querySelectorAll("tr[data-page-id]").forEach((row) => {
       row.addEventListener("click", function (e) {
         if (e.target.closest(".convert-btn")) return;
@@ -3371,7 +3759,7 @@
 
     observedLinks.forEach((rec) => {
       const kw = rec.anchorText || "";
-      const type = rec.anchorType || "other";
+      const type = classifyAnchorForLink(rec, state.pages);
 
       if (type === "primary") {
         primaryCount++;
@@ -3439,7 +3827,7 @@
     const dist = computeAnchorDistribution();
     const topPages = computeTopLinkedPages();
 
-    // ====== نوار Anchor ======
+    // Anchor bar
     const bar = document.getElementById("anchor-bar");
     if (bar) {
       const totalLinks =
@@ -3456,41 +3844,41 @@
         const otherPercent = dist.otherPercent;
 
         bar.innerHTML = `
-                ${primaryPercent > 0 ? `<div class="anchor-bar-segment primary" style="width:${primaryPercent}%">${primaryPercent}%</div>` : ""}
-                ${secondaryPercent > 0 ? `<div class="anchor-bar-segment secondary" style="width:${secondaryPercent}%">${secondaryPercent}%</div>` : ""}
-                ${lsiPercent > 0 ? `<div class="anchor-bar-segment lsi" style="width:${lsiPercent}%">${lsiPercent}%</div>` : ""}
-                ${otherPercent > 0 ? `<div class="anchor-bar-segment other" style="width:${otherPercent}%; background:#8B8B8B; border-radius:0 3px 3px 0;">${otherPercent}%</div>` : ""}
-            `;
+                    ${primaryPercent > 0 ? `<div class="anchor-bar-segment primary" style="width:${primaryPercent}%">${primaryPercent}%</div>` : ""}
+                    ${secondaryPercent > 0 ? `<div class="anchor-bar-segment secondary" style="width:${secondaryPercent}%">${secondaryPercent}%</div>` : ""}
+                    ${lsiPercent > 0 ? `<div class="anchor-bar-segment lsi" style="width:${lsiPercent}%">${lsiPercent}%</div>` : ""}
+                    ${otherPercent > 0 ? `<div class="anchor-bar-segment other" style="width:${otherPercent}%; background:#8B8B8B; border-radius:0 3px 3px 0;">${otherPercent}%</div>` : ""}
+                `;
       }
     }
 
-    // ====== لیست کلمات کلیدی (با قابلیت کلیک) ======
+    // Keywords lists (clickable)
     const keywordsContainer = document.getElementById("top-keywords");
     if (keywordsContainer) {
       const buildList = (title, count, items) => {
         const limitedItems = items.slice(0, MAX_ITEMS_PER_CATEGORY);
         return `
-                <div class="keyword-column">
-                    <h4>${title}</h4>
-                    <div class="keyword-count-summary">${count} link${count !== 1 ? "s" : ""}</div>
-                    <ul class="keyword-list">
-                        ${
-                          limitedItems.length
-                            ? limitedItems
-                                .map(
-                                  (i) => `
-                                    <li class="keyword-item" data-anchor="${i.keyword.replace(/"/g, "&quot;")}">
-                                        <span class="keyword-term">${i.keyword}</span>
-                                        <span class="keyword-count">${i.count}</span>
-                                    </li>
-                                `,
-                                )
-                                .join("")
-                            : `<li style="color:var(--muted); font-size:12px;">—</li>`
-                        }
-                    </ul>
-                </div>
-            `;
+                    <div class="keyword-column">
+                        <h4>${title}</h4>
+                        <div class="keyword-count-summary">${count} link${count !== 1 ? "s" : ""}</div>
+                        <ul class="keyword-list">
+                            ${
+                              limitedItems.length
+                                ? limitedItems
+                                    .map(
+                                      (i) => `
+                                                  <li class="keyword-item" data-anchor="${i.keyword.replace(/"/g, "&quot;")}">
+                                                      <span class="keyword-term">${i.keyword}</span>
+                                                      <span class="keyword-count">${i.count}</span>
+                                                  </li>
+                                              `,
+                                    )
+                                    .join("")
+                                : `<li style="color:var(--muted); font-size:12px;">—</li>`
+                            }
+                        </ul>
+                    </div>
+                `;
       };
 
       keywordsContainer.innerHTML =
@@ -3499,7 +3887,6 @@
         buildList("LSI", dist.lsiCount, dist.topLsi) +
         buildList("Other", dist.otherCount, dist.topOther);
 
-      // رویداد کلیک روی آیتم‌های لیست برای باز کردن مودال جزئیات anchor
       keywordsContainer.querySelectorAll(".keyword-item").forEach((item) => {
         item.addEventListener("click", function () {
           const anchorText = this.getAttribute("data-anchor");
@@ -3510,7 +3897,7 @@
       });
     }
 
-    // ====== جدول برترین صفحات (با لینک‌های کلیک‌شونده برای ویرایش) ======
+    // Top pages table (clickable)
     const tbody = document.getElementById("top-pages-body");
     if (tbody) {
       const totalLinks = topPages.reduce((sum, p) => sum + p.incomingLinks, 0);
@@ -3521,20 +3908,19 @@
               ? ((p.incomingLinks / totalLinks) * 100).toFixed(2)
               : "0.00";
           return `
-                    <tr data-page-id="${p.id}">
-                        <td>
-                            <a href="#" class="page-link" data-page-id="${p.id}" data-action="edit-page">
-                                ${displayUrl(p.url)}
-                            </a>
-                        </td>
-                        <td>${p.incomingLinks}</td>
-                        <td>${percent}%</td>
-                    </tr>
-                `;
+                        <tr data-page-id="${p.id}">
+                            <td>
+                                <a href="#" class="page-link" data-page-id="${p.id}" data-action="edit-page">
+                                    ${displayUrl(p.url)}
+                                </a>
+                            </td>
+                            <td>${p.incomingLinks}</td>
+                            <td>${percent}%</td>
+                        </tr>
+                    `;
         })
         .join("");
 
-      // رویداد کلیک روی لینک‌های داخل جدول برای باز کردن ویرایشگر
       tbody.querySelectorAll("a.page-link[data-page-id]").forEach((link) => {
         link.addEventListener("click", function (e) {
           e.preventDefault();
@@ -3607,7 +3993,7 @@
     };
   }
 
-  // ========== ANCHOR DETAILS MODAL ==========
+  /* :::::::::::::::::::::::::: ANCHOR DETAILS MODAL :::::::::::::::::::::::::: */
   function openAnchorDetailsModal(anchorText) {
     const modal = document.getElementById("anchorDetailsModal");
     const titleEl = document.getElementById("anchorTermDisplay");
@@ -3649,44 +4035,42 @@
       const targetId = target ? target.id : null;
 
       html += `<tr>
-            <td>
-                ${
-                  sourceId
-                    ? `<a href="#" class="page-link" data-page-id="${sourceId}" data-action="edit-page">${sourceName}</a>`
-                    : `<span class="page-link" style="color:var(--danger);">${sourceName}</span>`
-                }
-            </td>
-            <td>${rec.anchorText || "—"}</td>
-            <td>
-                ${
-                  targetId
-                    ? `<a href="#" class="page-link" data-page-id="${targetId}" data-action="edit-page">${targetName}</a>`
-                    : `<span class="page-link" style="color:var(--danger);">${targetName}</span>`
-                }
-            </td>
-        </tr>`;
+                <td>
+                    ${
+                      sourceId
+                        ? `<a href="javascript:void(0)" class="page-link" data-page-id="${sourceId}">${sourceName}</a>`
+                        : `<span class="page-link" style="color:var(--danger);">${sourceName}</span>`
+                    }
+                </td>
+                <td>${rec.anchorText || "—"}</td>
+                <td>
+                    ${
+                      targetId
+                        ? `<a href="javascript:void(0)" class="page-link" data-page-id="${targetId}">${targetName}</a>`
+                        : `<span class="page-link" style="color:var(--danger);">${targetName}</span>`
+                    }
+                </td>
+            </tr>`;
     });
 
-    tbody.innerHTML = html;
+    const newTbody = tbody.cloneNode(true);
+    tbody.parentNode.replaceChild(newTbody, tbody);
+    newTbody.innerHTML = html;
 
-    // رویداد کلیک روی لینک‌های داخل جدول (برای باز کردن ویرایشگر)
-    // بدون بستن مودال Anchor Details
-    tbody.querySelectorAll("a.page-link[data-page-id]").forEach((link) => {
-      link.addEventListener("click", function (e) {
-        e.preventDefault();
-        const pageId = this.getAttribute("data-page-id");
-        if (pageId) {
-          // فقط ویرایشگر را باز کن، مودال Anchor Details را نبند
-          openEditPageModal(pageId);
-        }
-      });
+    newTbody.addEventListener("click", (e) => {
+      const link = e.target.closest("[data-page-id]");
+      if (!link) return;
+      e.preventDefault();
+      const pageId = link.getAttribute("data-page-id");
+      if (pageId) {
+        openEditPageModal(pageId);
+      }
     });
 
-    // باز کردن مودال
     openModal(modal);
   }
 
-  // ========== INITIALIZATION ==========
+  /* :::::::::::::::::::::::::: INITIALIZATION :::::::::::::::::::::::::: */
   document.addEventListener("DOMContentLoaded", async () => {
     setupAuthListeners();
     customElements.whenDefined("sidebar-component").then(() => {
@@ -3704,6 +4088,7 @@
     });
   });
 
+  /* :::::::::::::::::::::::::: TOAST :::::::::::::::::::::::::: */
   function showToast(message) {
     const toast = document.createElement("div");
     toast.className = "ravlo-toast";

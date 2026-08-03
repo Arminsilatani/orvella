@@ -487,6 +487,46 @@
       <!-- :::::::::::::::::::::::::: EDIT PAGE MODAL :::::::::::::::::::::::::: -->
       <div id="editPageModal" class="modal">
         <div class="modal-content edit-page-modal-content">
+          <!-- :::::::::::::::::::::::::: GAUGES ROW :::::::::::::::::::::::::: -->
+          <div class="edit-page-gauges-row">
+            <div class="mini-gauge-card" id="editAnchorDistGauge">
+              <div class="mini-gauge-header">
+                <span class="mini-gauge-label">Anchor Health</span>
+                <span class="mini-gauge-score" id="editAnchorScore">--</span>
+              </div>
+              <div class="mini-gauge-status" id="editAnchorStatus"></div>
+              <div class="mini-gauge-detail" id="editAnchorDetail"></div>
+            </div>
+
+            <div class="mini-gauge-card" id="editEquityGauge">
+              <div class="mini-gauge-header">
+                <span class="mini-gauge-label">Link Equity</span>
+                <span class="mini-gauge-score" id="editEquityScore">--</span>
+              </div>
+              <div class="mini-gauge-status" id="editEquityStatus"></div>
+              <div class="mini-gauge-detail" id="editEquityDetail"></div>
+            </div>
+          </div>
+
+          <!-- :::::::::::::::::::::::::: INCOMING LINKS BOX :::::::::::::::::::::::::: -->
+          <div class="incoming-links-box" id="incoming-links-box">
+            <h3 class="suggestions-title">Pages Linking to This Page</h3>
+            <div class="table-wrapper" id="incoming-links-table-wrapper">
+              <table class="incoming-links-table">
+                <thead>
+                  <tr>
+                    <th>URL</th>
+                    <th>Tags</th>
+                  </tr>
+                </thead>
+                <tbody id="incoming-links-body"></tbody>
+              </table>
+            </div>
+            <div class="empty-state" id="incoming-links-empty">
+              <p>No pages link to this page.</p>
+            </div>
+          </div>
+
           <span class="close-modal">&times;</span>
           <div class="section-heading">
             <div>
@@ -596,23 +636,6 @@
           <div class="suggestions-box">
             <h3 class="suggestions-title">Outbound Link Suggestions</h3>
             <div id="edit-recommendations-list"></div>
-          </div>
-          <div class="incoming-links-box" id="incoming-links-box">
-            <h3 class="suggestions-title">Pages Linking to This Page</h3>
-            <div class="table-wrapper" id="incoming-links-table-wrapper">
-              <table class="incoming-links-table">
-                <thead>
-                  <tr>
-                    <th>URL</th>
-                    <th>Tags</th>
-                  </tr>
-                </thead>
-                <tbody id="incoming-links-body"></tbody>
-              </table>
-            </div>
-            <div class="empty-state" id="incoming-links-empty">
-              <p>No pages link to this page.</p>
-            </div>
           </div>
           <div class="form-step-nav edit-actions-row">
             <button class="secondary-button delete-page-btn" id="deletePageBtn">
@@ -766,9 +789,9 @@
               x2="100%"
               y2="0%"
             >
-              <stop offset="0%" stop-color="#ff6b6b" />
-              <stop offset="50%" stop-color="#ffe76d" />
-              <stop offset="100%" stop-color="#4ecdc4" />
+              <stop offset="0%" stop-color="#FF6B6B" />
+              <stop offset="50%" stop-color="#FFE76D" />
+              <stop offset="100%" stop-color="#4ECDC4" />
             </linearGradient>
             <linearGradient
               id="gradient-strategy"
@@ -777,9 +800,9 @@
               x2="100%"
               y2="0%"
             >
-              <stop offset="0%" stop-color="#ff6b6b" />
-              <stop offset="50%" stop-color="#ffe76d" />
-              <stop offset="100%" stop-color="#4ecdc4" />
+              <stop offset="0%" stop-color="#FF6B6B" />
+              <stop offset="50%" stop-color="#FFE76D" />
+              <stop offset="100%" stop-color="#4ECDC4" />
             </linearGradient>
             <linearGradient
               id="gradient-density"
@@ -788,11 +811,11 @@
               x2="100%"
               y2="0%"
             >
-              <stop offset="0%" stop-color="#ff6b6b" />
-              <stop offset="25%" stop-color="#ffe76d" />
-              <stop offset="50%" stop-color="#4ecdc4" />
-              <stop offset="75%" stop-color="#ffe76d" />
-              <stop offset="100%" stop-color="#ff6b6b" />
+              <stop offset="0%" stop-color="#FF6B6B" />
+              <stop offset="25%" stop-color="#FFE76D" />
+              <stop offset="50%" stop-color="#4ECDC4" />
+              <stop offset="75%" stop-color="#FFE76D" />
+              <stop offset="100%" stop-color="#FF6B6B" />
             </linearGradient>
           </defs>
         </svg>
@@ -900,7 +923,6 @@
           </div>
         </section>
 
-        <!-- ====== ردیف اول: Anchor Text Distribution 100% ====== -->
         <div class="distribution-row-full">
           <div class="distribution-anchor-full">
             <div class="panel-header">
@@ -911,7 +933,6 @@
           </div>
         </div>
 
-        <!-- ====== ردیف دوم: Top Linked Pages + Pages with Intent Links ====== -->
         <div class="distribution-row">
           <div class="distribution-top-pages">
             <div class="panel-header">
