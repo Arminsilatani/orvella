@@ -33,8 +33,6 @@
     <!-- <link rel="preconnect" href="[FONT_OR_API_DOMAIN]" crossorigin> -->
     <!-- <link rel="preload" href="[CRITICAL_RESOURCE_URL]" as="[style|script|font]"> -->
 
-    <!-- :::::::::::::::::::::::::: OPEN GRAPH :::::::::::::::::::::::::: -->
-
     <!-- :::::::::::::::::::::::::: TWITTER CARD :::::::::::::::::::::::::: -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Orvella — Internal Link Manager" />
@@ -423,6 +421,17 @@
                 <span class="neon-dot-indicator" aria-hidden="true"></span>
                 <span>Allow incoming links</span>
               </label>
+              <hr class="checkbox-divider" />
+              <label class="global-check-label">
+                <input
+                  type="checkbox"
+                  id="addExcludeDensity"
+                  class="neon-checkbox-native"
+                  hidden
+                />
+                <span class="neon-dot-indicator" aria-hidden="true"></span>
+                <span>Exclude from density checks</span>
+              </label>
               <div class="field-group priority-field">
                 <div class="priority-info">
                   <label>Page importance</label>
@@ -595,6 +604,18 @@
                 />
                 <span class="neon-dot-indicator" aria-hidden="true"></span>
                 <span>Allow incoming links</span>
+              </label>
+              <hr class="checkbox-divider" />
+
+              <label class="global-check-label">
+                <input
+                  type="checkbox"
+                  id="editExcludeDensity"
+                  class="neon-checkbox-native"
+                  hidden
+                />
+                <span class="neon-dot-indicator" aria-hidden="true"></span>
+                <span>Exclude from density checks</span>
               </label>
             </fieldset>
             <div class="field-group priority-field">

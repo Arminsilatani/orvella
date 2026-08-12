@@ -427,6 +427,13 @@ textarea {
   color: var(--accent);
 }
 
+.checkbox-divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 14px 0 12px 0;
+  opacity: 0.6;
+}
+
 /* :::::::::::::::::::::::::: AUTOCOMPLETE DROPDOWN :::::::::::::::::::::::::: */
 .autocomplete-list {
   background: rgba(20, 20, 20, 0.75);
@@ -1471,32 +1478,32 @@ body.modal-open {
 
 .gauge-card[data-gauge-type="density"] .gauge-segment-1 {
   stroke: #ff6b6b;
-  stroke-dasharray: 30.616 126.464;
+  stroke-dasharray: 25.51 131.57;
   stroke-dashoffset: 0;
 }
 
 .gauge-card[data-gauge-type="density"] .gauge-segment-2 {
   stroke: #ffe76d;
-  stroke-dasharray: 30.616 126.464;
-  stroke-dashoffset: -31.616;
+  stroke-dasharray: 25.51 131.57;
+  stroke-dashoffset: -26.51;
 }
 
 .gauge-card[data-gauge-type="density"] .gauge-segment-3 {
   stroke: #4ecdc4;
-  stroke-dasharray: 30.616 126.464;
-  stroke-dashoffset: -63.232;
+  stroke-dasharray: 51.03 106.05;
+  stroke-dashoffset: -53.02;
 }
 
 .gauge-card[data-gauge-type="density"] .gauge-segment-4 {
   stroke: #ffe76d;
-  stroke-dasharray: 30.616 126.464;
-  stroke-dashoffset: -94.848;
+  stroke-dasharray: 25.51 131.57;
+  stroke-dashoffset: -105.05;
 }
 
 .gauge-card[data-gauge-type="density"] .gauge-segment-5 {
   stroke: #ff6b6b;
-  stroke-dasharray: 30.616 126.464;
-  stroke-dashoffset: -126.464;
+  stroke-dasharray: 25.51 131.57;
+  stroke-dashoffset: -131.56;
 }
 
 .gauge-card[data-gauge-type="strategy"] .gauge-segment-1 {
@@ -1985,11 +1992,10 @@ body.modal-open {
 }
 
 .distribution-top-pages .table-wrapper {
-  max-height: 12rem;
+  max-height: calc(10 * 2.8rem);
   overflow-y: auto;
 }
 
-/* Pages with Intent Links (formerly planned-to-convert) */
 .planned-to-convert {
   flex: 1;
   height: 400px;
@@ -2014,7 +2020,6 @@ body.modal-open {
   min-height: 0;
 }
 
-/* Planned Convert table styles */
 .planned-convert-table {
   width: 100%;
   border-collapse: collapse;
@@ -2885,9 +2890,11 @@ input[type="number"] {
     scroll-snap-align: center;
     max-width: none;
   }
+
   .overview-row::-webkit-scrollbar {
     display: none;
   }
+
   .gauge-container {
     width: 160px;
     height: 100px;

@@ -207,27 +207,20 @@
 
   function normalizeTerm(value) {
     if (!value) return "";
-    return (
-      String(value)
-        .normalize("NFKC")
-        .toLowerCase()
-        // Convert half‑spaces and similar control characters to a regular space
-        .replace(/[\u200B-\u200D\uFEFF]/g, " ")
-        // Normalize Persian and Arabic letters
-        .replace(/[يى]/g, "ی")
-        .replace(/ك/g, "ک")
-        .replace(/[أإآٱ]/g, "ا")
-        .replace(/ة/g, "ه")
-        .replace(/ؤ/g, "و")
-        .replace(/ئ/g, "ی")
-        // Remove diacritics
-        .replace(/[\u064B-\u065F\u0670\u06D6-\u06ED]/g, "")
-        // Remove illegal characters – keep letters, numbers, spaces and hyphens
-        .replace(/[^\p{L}\p{N}\s-]/gu, "")
-        // Normalize whitespace
-        .replace(/\s+/g, " ")
-        .trim()
-    );
+    return String(value)
+      .normalize("NFKC")
+      .toLowerCase()
+      .replace(/[\u200B-\u200D\uFEFF]/g, " ")
+      .replace(/[يى]/g, "ی")
+      .replace(/ك/g, "ک")
+      .replace(/[أإآٱ]/g, "ا")
+      .replace(/ة/g, "ه")
+      .replace(/ؤ/g, "و")
+      .replace(/ئ/g, "ی")
+      .replace(/[\u064B-\u065F\u0670\u06D6-\u06ED]/g, "")
+      .replace(/[^\p{L}\p{N}\s-]/gu, "")
+      .replace(/\s+/g, " ")
+      .trim();
   }
 
   function isValidEmail(email) {
@@ -240,7 +233,6 @@
     let errorMessage = "";
 
     if (step === 1) {
-      // Step 1: Title, URL, Language, Word Count
       const title = elements.pageTitle.value.trim();
       const url = elements.pageUrl.value.trim();
       const language = elements.addPageLanguage.value.trim();
@@ -367,6 +359,8 @@
     languagesListContainer: document.getElementById("languagesListContainer"),
     editLanguage: document.getElementById("editLanguage"),
     addPageLanguage: document.getElementById("addPageLanguage"),
+    editExcludeDensity: document.getElementById("editExcludeDensity"),
+    addExcludeDensity: document.getElementById("addExcludeDensity"),
   };
 
   const stepInfo = [
@@ -622,6 +616,7 @@
           tags: tags,
           pageType: p.pageType || "actual",
           language: language,
+          excludeDensity: p.excludeDensity || false,
         };
       });
       state.recommendations = state.recommendations.map((rec) => ({
@@ -887,7 +882,7 @@
         const msgEl = document.getElementById("forgot-message");
         if (!email) {
           msgEl.textContent = "Please enter an email.";
-          msgEl.style.color = "#ff5555";
+          msgEl.style.color = "#FF5555";
           msgEl.style.display = "block";
           return;
         }
@@ -897,7 +892,7 @@
         msgEl.style.display = "block";
         if (error) {
           msgEl.textContent = error.message;
-          msgEl.style.color = "#ff5555";
+          msgEl.style.color = "#FF5555";
         } else {
           msgEl.textContent = "Reset link sent! Check your email.";
           msgEl.style.color = "var(--success)";
@@ -1078,7 +1073,7 @@
 
     const list = document.createElement("ul");
     list.className = "autocomplete-list autocomplete-glass";
-    document.body.appendChild(list); // placed outside modal structure
+    document.body.appendChild(list);
     let selectedIndex = -1;
 
     function positionList() {
@@ -1183,6 +1178,7 @@
     elements.pageForm.reset();
     elements.canLinkOutToggle.checked = true;
     elements.canReceiveLinksToggle.checked = true;
+    elements.addExcludeDensity.checked = false;
     initPrioritySelector();
     elements.pageTypeToggle.classList.remove("is-actual");
     elements.pageTypeToggle.classList.add("is-planned");
@@ -1301,7 +1297,6 @@
     const page = pages.find((p) => p.id === pageId);
     if (!page) return null;
 
-    // Manual importance weights
     const importanceMap = { 1: 1, 2: 2, 3: 4, 4: 7, 5: 11 };
     const importanceWeights = pages.map((p) => ({
       id: p.id,
@@ -1316,7 +1311,6 @@
     const inLinks = {};
     const linkQuality = {};
 
-    // Anchor quality based on category
     const anchorQualityMap = {
       primary: 1.0,
       secondary: 0.85,
@@ -1348,7 +1342,6 @@
       };
     }
 
-    // PageRank iterative
     const d = 0.85;
     const N = pages.length;
     let authority = {};
@@ -1373,7 +1366,6 @@
         newAuth[p.id] = 1 - d + d * sum;
         totalAuth += newAuth[p.id];
       });
-      // Normalization
       if (totalAuth > 0) {
         pages.forEach((p) => {
           newAuth[p.id] = newAuth[p.id] / totalAuth;
@@ -1382,14 +1374,12 @@
       authority = newAuth;
     }
 
-    // Percentile calculation
     const authValues = Object.values(authority).sort((a, b) => a - b);
     const pageAuth = authority[pageId] || 0;
     let rank = authValues.findIndex((v) => v >= pageAuth);
     if (rank === -1) rank = authValues.length - 1;
     const percentile = (rank / (authValues.length - 1)) * 100;
 
-    // Peer average
     const sameImportancePages = pages.filter(
       (p) => p.priority === page.priority && p.id !== pageId,
     );
@@ -1405,7 +1395,6 @@
       if (ratio < 70) status = "Underpowered";
       else if (ratio > 120) status = "Over-concentrated";
     } else {
-      // If no peers, compare against expected target
       const expected = (weightById[pageId] / 11) * 100;
       if (percentile < expected - 20) status = "Underpowered";
       else if (percentile > expected + 20) status = "Over-concentrated";
@@ -1480,6 +1469,7 @@
     elements.editLsiKeywords.value = (page.lsiKeywords || []).join("\n");
     elements.editCanLinkOut.checked = page.canLinkOut;
     elements.editCanReceiveLinks.checked = page.canReceiveLinks;
+    elements.editExcludeDensity.checked = page.excludeDensity === true;
     elements.editPagePriority.value = page.priority || 3;
 
     const pageType = page.pageType || "planned";
@@ -1574,7 +1564,6 @@
             `;
     });
 
-    // Permanent empty row for adding a new link
     html += `
             <div class="suggestion-item" id="add-rec-row">
                 <div class="suggestion-row-full">
@@ -1595,7 +1584,6 @@
 
     container.innerHTML = html;
 
-    // Remove a recommendation
     container.querySelectorAll(".remove-rec-btn").forEach((btn) => {
       btn.addEventListener("click", () => {
         const recId = btn.getAttribute("data-rec-id");
@@ -1603,7 +1591,6 @@
       });
     });
 
-    // Link type toggle (Observed/Intent)
     container.querySelectorAll(".link-type-bar[data-rec-id]").forEach((bar) => {
       const recId = bar.getAttribute("data-rec-id");
       const hidden = bar.querySelector(".link-type-value");
@@ -1621,7 +1608,6 @@
       });
     });
 
-    // New row link type bar
     const newBar = document.getElementById("new-link-type-bar");
     if (newBar) {
       const hidden = newBar.querySelector(".link-type-value");
@@ -1635,7 +1621,6 @@
       });
     }
 
-    // Edit / Save button
     container.querySelectorAll(".edit-rec-btn").forEach((btn) => {
       btn.addEventListener("click", () => {
         const recId = btn.getAttribute("data-rec-id");
@@ -1643,7 +1628,6 @@
         if (!rec) return;
 
         if (rec.editMode) {
-          // Save mode: apply the entered URL
           const input = container.querySelector(
             `.edit-target-url-input[data-rec-id="${recId}"]`,
           );
@@ -1658,7 +1642,6 @@
               (p) => p.url.toLowerCase() === url.toLowerCase(),
             );
             if (!targetPage) {
-              // For intent links, create a temporary planned page
               if (rec.linkType === "intent") {
                 targetPage = {
                   id: createId(),
@@ -1690,14 +1673,12 @@
           saveState();
           renderEditRecommendations(pageId);
         } else {
-          // Enter edit mode
           rec.editMode = true;
           renderEditRecommendations(pageId);
         }
       });
     });
 
-    // Enter key on URL fields in edit mode
     container.querySelectorAll(".edit-target-url-input").forEach((input) => {
       attachSimpleAutocomplete(input, pageUrlSuggestions);
       input.addEventListener("keydown", (e) => {
@@ -1749,7 +1730,6 @@
       });
     });
 
-    // Update anchor text
     container.querySelectorAll(".anchor-input").forEach((input) => {
       input.addEventListener("input", () => {
         const recId = input.getAttribute("data-rec-id");
@@ -1760,7 +1740,6 @@
       });
     });
 
-    // Events for the new empty link row
     const pageInput = document.getElementById("new-rec-page");
     const anchorInput = document.getElementById("new-rec-anchor");
 
@@ -1955,6 +1934,7 @@
     const canReceiveLinks = elements.editCanReceiveLinks.checked;
     const priority = parseInt(elements.editPagePriority.value, 10) || 3;
     const pageType = elements.editPageType.value;
+    const excludeDensity = elements.editExcludeDensity.checked;
 
     const duplicate = state.pages.some(
       (p) => p.id !== pageId && p.url.toLowerCase() === url.toLowerCase(),
@@ -1981,6 +1961,7 @@
       tags,
       pageType,
       language: langCode,
+      excludeDensity,
     };
 
     showGlobalLoader();
@@ -2239,7 +2220,6 @@
     event.preventDefault();
     if (!requireLogin("add pages")) return;
 
-    // Step‑by‑step validation
     if (!validateStep(1)) {
       goToStep(1);
       return;
@@ -2253,7 +2233,6 @@
       return;
     }
 
-    // Gather values
     const title = elements.pageTitle.value.trim();
     const url = normalizeUrl(elements.pageUrl.value.trim());
     const tags = parseKeywords(elements.tagsInput.value);
@@ -2267,8 +2246,8 @@
     const canReceiveLinks = elements.canReceiveLinksToggle.checked;
     const priority = parseInt(elements.pagePriority.value, 10) || 3;
     const pageType = elements.pageType.value;
+    const excludeDensity = elements.addExcludeDensity.checked;
 
-    // Final supplemental validation
     if (!title || !url || !primaryKeywordVal) {
       showToast("Please fill in all required fields.");
       return;
@@ -2279,7 +2258,6 @@
       return;
     }
 
-    // Language
     const langValue = elements.addPageLanguage.value.trim();
     let langCode = null;
     if (langValue) {
@@ -2295,7 +2273,6 @@
       langCode = langValue.split(" - ")[0].toUpperCase();
     }
 
-    // Duplicate URL check
     const normalizedUrl = url.toLowerCase();
     const existingActual = state.pages.find(
       (p) =>
@@ -2308,14 +2285,12 @@
         (p.pageType || "actual") === "planned",
     );
 
-    // Planned → Actual conversion logic
     if (pageType === "actual") {
       if (existingActual) {
         showToast("An Actual Page with this URL already exists.");
         return;
       }
       if (existingPlanned) {
-        // Convert existing Planned Page to Actual
         Object.assign(existingPlanned, {
           title,
           url,
@@ -2329,6 +2304,7 @@
           tags,
           pageType: "actual",
           language: langCode,
+          excludeDensity,
         });
         state.recommendations = buildRecommendations();
         await saveStateNow();
@@ -2363,10 +2339,11 @@
         tags,
         pageType,
         language: langCode,
+        excludeDensity,
       });
 
       state.recommendations = buildRecommendations();
-      await saveStateNow(); // Immediate save instead of debounced
+      await saveStateNow();
       closeAddPageModal();
       renderOverviewGauges();
       showToast("Page added successfully!");
@@ -2419,7 +2396,7 @@
 
     const outboundBudgets = {};
     const sources = pages.filter(
-      (p) => p.canLinkOut && p.tags && p.tags.length > 0,
+      (p) => p.canLinkOut && p.tags && p.tags.length > 0 && !p.excludeDensity,
     );
     for (const src of sources) {
       let budget = Math.floor((src.wordCount || 0) / 300);
@@ -2501,7 +2478,6 @@
       }
     }
 
-    // Anchor assignment
     let primaryCount = 0,
       secondaryCount = 0,
       lsiCount = 0;
@@ -2651,7 +2627,13 @@
   /* :::::::::::::::::::::::::: GAUGE CALCULATIONS :::::::::::::::::::::::::: */
   const overviewCalculator = {
     computeDensityScore(pages, links) {
-      const pagesWithOutbound = pages.filter((p) => p.canLinkOut);
+      const eligiblePages = pages.filter((p) => !p.excludeDensity);
+      const eligibleLinks = links.filter((l) => {
+        const src = pages.find((p) => p.id === l.sourceId);
+        return src && !src.excludeDensity;
+      });
+
+      const pagesWithOutbound = eligiblePages.filter((p) => p.canLinkOut);
       const totalWords = pagesWithOutbound.reduce(
         (sum, p) => sum + (p.wordCount || 0),
         0,
@@ -2660,7 +2642,8 @@
         (sum, p) => sum + Math.floor((p.wordCount || 0) / 300),
         0,
       );
-      const totalLinks = links.length;
+      const totalLinks = eligibleLinks.length;
+
       if (totalTarget === 0)
         return {
           finalScore: 0,
@@ -2674,17 +2657,20 @@
             recommendedLinks: 0,
           },
         };
+
       const densityValue = totalLinks / totalTarget;
       const globalScore = this._densityRatioScore(densityValue);
+
       const pageScores = pagesWithOutbound.map((p) => {
         const expected = Math.floor((p.wordCount || 0) / 300);
-        const actual = links.filter((l) => l.sourceId === p.id).length;
+        const actual = eligibleLinks.filter((l) => l.sourceId === p.id).length;
         if (expected === 0) return { pageId: p.id, score: 100, weight: 0 };
         const ratio = actual / expected;
         const score = this._densityRatioScore(ratio);
         const weight = Math.min(p.wordCount || 0, 1200);
         return { pageId: p.id, score, weight };
       });
+
       const totalWeight = pageScores.reduce((sum, ps) => sum + ps.weight, 0);
       const pageLevelScore =
         totalWeight > 0
@@ -2692,6 +2678,7 @@
             totalWeight
           : 0;
       const finalScore = Math.round(globalScore * 0.6 + pageLevelScore * 0.4);
+
       return {
         finalScore,
         densityValue,
@@ -2960,7 +2947,7 @@
     updateDensityGauge(densityCard, density.densityValue);
     setGaugeLabels(
       densityCard,
-      density.finalScore + "/100",
+      density.extra.totalLinks + " / " + density.extra.totalTarget,
       getDensityStatus(density.densityValue),
     );
     updateGaugeDetails(densityCard, [
@@ -3018,8 +3005,11 @@
   function updateDensityGauge(card, densityValue) {
     const svg = card.querySelector("svg.gauge");
     const needle = svg.querySelector(".gauge-needle");
-    const maxDensity = 3;
-    const rotation = -90 + (densityValue / maxDensity) * 180;
+
+    let rotation = -90 + (densityValue / 2) * 180;
+
+    rotation = Math.min(90, Math.max(-90, rotation));
+
     needle.style.transform = `rotate(${rotation}deg)`;
     needle.style.transformOrigin = "70px 70px";
   }
@@ -3230,7 +3220,6 @@
       }
     });
 
-    // ========== LANGUAGES ==========
     elements.newLanguageInput.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
         const dropdown =
@@ -3418,9 +3407,9 @@
   }
 
   function computePriorityActions() {
-    const actions = [];
-    const actualPages = getActualPages();
+    const actualPages = getActualPages().filter((p) => !p.excludeDensity);
     const observedLinks = getObservedLinks();
+    const actions = [];
 
     actualPages.forEach((page) => {
       if (!page.canReceiveLinks) return;
@@ -3633,7 +3622,6 @@
 
     if (badge) badge.textContent = `${items.length} pages`;
 
-    // Convert button listener
     tbody.querySelectorAll(".convert-btn").forEach((btn) => {
       btn.addEventListener("click", function (e) {
         e.stopPropagation();
@@ -3644,7 +3632,6 @@
       });
     });
 
-    // Row click opens editor (except button)
     tbody.querySelectorAll("tr[data-page-id]").forEach((row) => {
       row.addEventListener("click", function (e) {
         if (e.target.closest(".convert-btn")) return;
@@ -3827,7 +3814,6 @@
     const dist = computeAnchorDistribution();
     const topPages = computeTopLinkedPages();
 
-    // Anchor bar
     const bar = document.getElementById("anchor-bar");
     if (bar) {
       const totalLinks =
@@ -3852,7 +3838,6 @@
       }
     }
 
-    // Keywords lists (clickable)
     const keywordsContainer = document.getElementById("top-keywords");
     if (keywordsContainer) {
       const buildList = (title, count, items) => {
@@ -3897,7 +3882,6 @@
       });
     }
 
-    // Top pages table (clickable)
     const tbody = document.getElementById("top-pages-body");
     if (tbody) {
       const totalLinks = topPages.reduce((sum, p) => sum + p.incomingLinks, 0);
@@ -4101,7 +4085,7 @@
                 <circle cx="12" cy="12" r="${radius}" fill="none" 
                         stroke="rgba(255,255,255,0.3)" stroke-width="2"/>
                 <circle cx="12" cy="12" r="${radius}" fill="none" 
-                        stroke="#fff" stroke-width="2"
+                        stroke="#FFFFFF" stroke-width="2"
                         stroke-dasharray="${circumference}" stroke-dashoffset="0"
                         stroke-linecap="round"
                         style="transition: stroke-dashoffset 4s linear;"/>
