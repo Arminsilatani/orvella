@@ -1181,6 +1181,20 @@ body.modal-open {
   transform: translateY(-50%);
 }
 
+#confirmDeleteModal {
+  z-index: 6;
+}
+
+#addPageModal .field-group:has(textarea),
+#editPageModal .field-group:has(textarea) {
+  overflow: hidden;
+}
+#duplicateUrlModal .confirm-delete-text {
+  margin-bottom: 20px;
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.6;
+}
 @keyframes modalIn {
   from {
     opacity: 0;

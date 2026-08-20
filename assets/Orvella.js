@@ -147,6 +147,9 @@
   let editingPageId = null;
   let activePagesTab = "actual";
 
+  /* :::::::::::::::::::::::::: DUPLICATE URL MERGE STATE :::::::::::::::::::::::::: */
+  let pendingMergeData = null;
+
   /* :::::::::::::::::::::::::: UTILITY FUNCTIONS :::::::::::::::::::::::::: */
   function showGlobalLoader() {
     const loader = document.getElementById("initial-loader");
@@ -948,6 +951,135 @@
       const prefixWidth = prefix.getBoundingClientRect().width;
       input.style.paddingLeft = 12 + prefixWidth + 8 + "px";
     });
+  }
+
+  /* :::::::::::::::::::::::::: DUPLICATE URL MERGE MODAL :::::::::::::::::::::::::: */
+  function showDuplicateUrlPrompt(
+    existingPage,
+    incomingData,
+    sourcePageId = null,
+  ) {
+    pendingMergeData = {
+      targetPageId: existingPage.id,
+      sourcePageId: sourcePageId,
+      data: incomingData,
+    };
+
+    const messageEl = document.getElementById("duplicate-url-message");
+    if (messageEl) {
+      messageEl.textContent = `The URL "${existingPage.url}" already exists. Merge this page with the existing one?`;
+    }
+
+    const modal = document.getElementById("duplicateUrlModal");
+    if (modal) {
+      modal.style.display = "flex";
+      document.body.classList.add("modal-open");
+    } else {
+      console.warn("duplicateUrlModal element not found in DOM.");
+    }
+  }
+
+  function mergeUniqueTexts(existing, incoming) {
+    const ex = Array.isArray(existing) ? existing : existing ? [existing] : [];
+    const inc = Array.isArray(incoming) ? incoming : incoming ? [incoming] : [];
+    return [...new Set([...ex, ...inc])];
+  }
+
+  function mergeUniqueTags(existingTags, newTags) {
+    const existing = Array.isArray(existingTags) ? existingTags : [];
+    const incoming = Array.isArray(newTags) ? newTags : [];
+    return [...new Set([...existing, ...incoming])];
+  }
+
+  function mergeFormDataIntoPage(targetPage, data) {
+    targetPage.title = data.title || targetPage.title;
+    targetPage.url = targetPage.url;
+    targetPage.language = data.language || targetPage.language;
+    targetPage.wordCount = data.wordCount ?? targetPage.wordCount;
+    targetPage.primaryKeyword =
+      data.primaryKeyword || targetPage.primaryKeyword;
+    targetPage.secondaryKeywords = mergeUniqueTexts(
+      targetPage.secondaryKeywords,
+      data.secondaryKeywords,
+    );
+    targetPage.lsiKeywords = mergeUniqueTexts(
+      targetPage.lsiKeywords,
+      data.lsiKeywords,
+    );
+    targetPage.tags = mergeUniqueTags(targetPage.tags, data.tags);
+    targetPage.canLinkOut = data.canLinkOut ?? targetPage.canLinkOut;
+    targetPage.canReceiveLinks =
+      data.canReceiveLinks ?? targetPage.canReceiveLinks;
+    targetPage.excludeDensity =
+      data.excludeDensity ?? targetPage.excludeDensity;
+    targetPage.priority = data.priority ?? targetPage.priority;
+    if (data.pageType === "actual" && targetPage.pageType !== "actual") {
+      targetPage.pageType = "actual";
+    } else if (data.pageType) {
+      targetPage.pageType = data.pageType;
+    }
+  }
+
+  async function mergePageInto(sourcePageId, targetPageId, incomingData) {
+    const targetPage = state.pages.find((p) => p.id === targetPageId);
+    const sourcePage = state.pages.find((p) => p.id === sourcePageId);
+    if (!targetPage || !sourcePage) {
+      throw new Error("Source or target page not found during merge.");
+    }
+
+    mergeFormDataIntoPage(targetPage, incomingData);
+
+    const seen = new Set();
+    const newRecs = [];
+    state.recommendations.forEach((rec) => {
+      const newRec = { ...rec };
+      if (newRec.sourceId === sourcePageId) newRec.sourceId = targetPageId;
+      if (newRec.targetId === sourcePageId) newRec.targetId = targetPageId;
+      const key = `${newRec.sourceId}:${newRec.targetId}:${newRec.anchorText || ""}:${newRec.linkType || "observed"}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        newRecs.push(newRec);
+      }
+    });
+    state.recommendations = newRecs;
+
+    state.pages = state.pages.filter((p) => p.id !== sourcePageId);
+  }
+
+  async function confirmMerge() {
+    if (!pendingMergeData) return;
+
+    const { targetPageId, sourcePageId, data } = pendingMergeData;
+    const targetPage = state.pages.find((p) => p.id === targetPageId);
+    if (!targetPage) {
+      closeModal(document.getElementById("duplicateUrlModal"));
+      pendingMergeData = null;
+      return;
+    }
+
+    showGlobalLoader();
+    try {
+      if (sourcePageId) {
+        await mergePageInto(sourcePageId, targetPageId, data);
+      } else {
+        mergeFormDataIntoPage(targetPage, data);
+      }
+
+      state.recommendations = buildRecommendations();
+      await saveStateNow();
+
+      closeModal(document.getElementById("duplicateUrlModal"));
+      closeModal(elements.editPageModal);
+      closeModal(elements.addPageModal);
+      renderOverviewGauges();
+      showToast("Pages merged successfully");
+    } catch (err) {
+      console.error("Merge failed:", err);
+      showToast("Merge failed. Please try again.");
+    } finally {
+      hideGlobalLoader();
+      pendingMergeData = null;
+    }
   }
 
   /* :::::::::::::::::::::::::: AUTOCOMPLETE :::::::::::::::::::::::::: */
@@ -1940,7 +2072,27 @@
       (p) => p.id !== pageId && p.url.toLowerCase() === url.toLowerCase(),
     );
     if (duplicate) {
-      alert("Another page with this URL already exists.");
+      const existingPage = state.pages.find(
+        (p) => p.id !== pageId && p.url.toLowerCase() === url.toLowerCase(),
+      );
+      showDuplicateUrlPrompt(
+        existingPage,
+        {
+          title,
+          url,
+          language: langCode,
+          wordCount,
+          primaryKeyword,
+          secondaryKeywords,
+          lsiKeywords,
+          canLinkOut,
+          canReceiveLinks,
+          priority,
+          pageType,
+          excludeDensity,
+        },
+        pageId,
+      );
       return;
     }
 
@@ -2287,7 +2439,21 @@
 
     if (pageType === "actual") {
       if (existingActual) {
-        showToast("An Actual Page with this URL already exists.");
+        showDuplicateUrlPrompt(existingActual, {
+          title,
+          url,
+          language: langCode,
+          wordCount: wordCountVal,
+          primaryKeyword: primaryKeywordVal,
+          secondaryKeywords: secondaryKeywordsVal,
+          lsiKeywords: lsiKeywordsVal,
+          canLinkOut,
+          canReceiveLinks,
+          priority,
+          tags,
+          pageType,
+          excludeDensity,
+        });
         return;
       }
       if (existingPlanned) {
@@ -2315,7 +2481,22 @@
       }
     } else if (pageType === "planned") {
       if (existingActual || existingPlanned) {
-        showToast("A page with this URL already exists (Actual or Planned).");
+        const existing = existingActual || existingPlanned;
+        showDuplicateUrlPrompt(existing, {
+          title,
+          url,
+          language: langCode,
+          wordCount: wordCountVal,
+          primaryKeyword: primaryKeywordVal,
+          secondaryKeywords: secondaryKeywordsVal,
+          lsiKeywords: lsiKeywordsVal,
+          canLinkOut,
+          canReceiveLinks,
+          priority,
+          tags,
+          pageType,
+          excludeDensity,
+        });
         return;
       }
     }
@@ -3275,6 +3456,16 @@
           }
         });
       });
+
+    // Duplicate URL merge modal events
+    document.getElementById("cancelMergeBtn")?.addEventListener("click", () => {
+      closeModal(document.getElementById("duplicateUrlModal"));
+      pendingMergeData = null;
+    });
+
+    document
+      .getElementById("confirmMergeBtn")
+      ?.addEventListener("click", confirmMerge);
   }
 
   /* :::::::::::::::::::::::::: STATUS PILL GLOBAL LISTENER :::::::::::::::::::::::::: */
@@ -4071,6 +4262,47 @@
       });
     });
   });
+
+  // :::::::::::::::::::::::::: SYNC FIELD PREFIX WITH TEXTAREA SCROLL ::::::::::::::::::::::::::
+  function syncFieldPrefixWithTextareaScroll() {
+    document.querySelectorAll(".field-group textarea").forEach((textarea) => {
+      const prefix = textarea
+        .closest(".field-group")
+        ?.querySelector(".field-prefix");
+      if (!prefix) return;
+
+      const sync = () => {
+        prefix.style.transform = `translateY(-${textarea.scrollTop}px)`;
+      };
+
+      textarea.addEventListener("scroll", sync);
+      textarea.addEventListener("input", sync);
+    });
+  }
+
+  document.addEventListener(
+    "scroll",
+    (event) => {
+      const textarea = event.target;
+      if (
+        textarea instanceof HTMLTextAreaElement &&
+        textarea.closest(".field-group")
+      ) {
+        const prefix = textarea
+          .closest(".field-group")
+          .querySelector(".field-prefix");
+        if (prefix) {
+          prefix.style.transform = `translateY(-${textarea.scrollTop}px)`;
+        }
+      }
+    },
+    true,
+  );
+
+  document.addEventListener(
+    "DOMContentLoaded",
+    syncFieldPrefixWithTextareaScroll,
+  );
 
   /* :::::::::::::::::::::::::: TOAST :::::::::::::::::::::::::: */
   function showToast(message) {
