@@ -1,7 +1,8 @@
+<!-- :::::::::::::::::::::::::: DOCTYPE / ROOT :::::::::::::::::::::::::: -->
 <!doctype html>
 <html lang="en" dir="ltr">
   <head>
-    <!-- :::::::::::::::::::::::::: META TAGS :::::::::::::::::::::::::: -->
+    <!-- :::::::::::::::::::::::::: HEAD :::::::::::::::::::::::::: -->
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
@@ -13,12 +14,13 @@
     />
     <meta name="robots" content="noindex, nofollow" />
 
-    <!-- :::::::::::::::::::::::::: FAVICON & STYLES :::::::::::::::::::::::::: -->
+    <!-- :::::::::::::::::::::::::: FAVICONS :::::::::::::::::::::::::: -->
     <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
     <link rel="icon" type="image/x-icon" href="assets/favicon.ico" />
     <link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
     <link rel="icon" type="image/png" sizes="32x32" href="assets/icon-32.png" />
 
+    <!-- :::::::::::::::::::::::::: STYLESHEETS :::::::::::::::::::::::::: -->
     <link rel="stylesheet" href="assets/Orvella.css" />
     <link
       rel="stylesheet"
@@ -29,11 +31,6 @@
       href="https://arminsilatani.github.io/tools/assets/sidebar.css"
     />
 
-    <!-- :::::::::::::::::::::::::: RESOURCE HINTS :::::::::::::::::::::::::: -->
-    <!-- <link rel="preconnect" href="[FONT_OR_API_DOMAIN]" crossorigin> -->
-    <!-- <link rel="preload" href="[CRITICAL_RESOURCE_URL]" as="[style|script|font]"> -->
-
-    <!-- :::::::::::::::::::::::::: TWITTER CARD :::::::::::::::::::::::::: -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Orvella — Internal Link Manager" />
     <meta
@@ -42,9 +39,7 @@
     />
     <meta name="twitter:image" content="[YOUR_ABSOLUTE_TWITTER_IMAGE_URL]" />
 
-    <!-- :::::::::::::::::::::::::: CANONICAL & HREFLANG :::::::::::::::::::::::::: -->
     <link rel="canonical" href="https://orvella.arminsilatani.com/" />
-    <!-- <link rel="alternate" hreflang="[LANG_CODE]" href="[ABSOLUTE_URL_TO_ALT_VERSION]"> -->
 
     <!-- :::::::::::::::::::::::::: SCHEMA :::::::::::::::::::::::::: -->
     <script type="application/ld+json">
@@ -146,6 +141,7 @@
       }
     </script>
 
+    <!-- :::::::::::::::::::::::::: SCRIPTS :::::::::::::::::::::::::: -->
     <script src="assets/supabase.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
@@ -294,7 +290,7 @@
 
     <!-- :::::::::::::::::::::::::: APP CONTAINER :::::::::::::::::::::::::: -->
     <div id="app-container" class="app-hidden">
-      <!-- :::::::::::::::::::::::::: HEADER :::::::::::::::::::::::::: -->
+      <!-- :::::::::::::::::::::::::: HEADER / NAVBAR :::::::::::::::::::::::::: -->
       <header class="glass-header">
         <div class="header-container">
           <div class="header-inner">
@@ -496,7 +492,6 @@
       <!-- :::::::::::::::::::::::::: EDIT PAGE MODAL :::::::::::::::::::::::::: -->
       <div id="editPageModal" class="modal">
         <div class="modal-content edit-page-modal-content">
-          <!-- :::::::::::::::::::::::::: GAUGES ROW :::::::::::::::::::::::::: -->
           <div class="edit-page-gauges-row">
             <div class="mini-gauge-card" id="editAnchorDistGauge">
               <div class="mini-gauge-header">
@@ -524,7 +519,6 @@
             <div id="anchorRecommendationContent"></div>
           </div>
 
-          <!-- :::::::::::::::::::::::::: INCOMING LINKS BOX :::::::::::::::::::::::::: -->
           <div class="incoming-links-box" id="incoming-links-box">
             <h3 class="suggestions-title">Pages Linking to This Page</h3>
             <div class="table-wrapper" id="incoming-links-table-wrapper">
@@ -724,7 +718,6 @@
               inputmode="numeric"
             />
           </div>
-          <!-- :::::::::::::::::::::::::: LANGUAGES :::::::::::::::::::::::::: -->
           <div class="section-heading" style="margin-top: 28px">
             <div>
               <span class="eyebrow">Languages</span>
@@ -786,23 +779,11 @@
                   >Your Planned Pages</span
                 >
               </h2>
-              <p>All pages currently tracked by Orvella.</p>
+              <p>Browse pages by URL structure.</p>
             </div>
           </div>
-          <div class="table-wrapper">
-            <table class="pages-table">
-              <thead>
-                <tr>
-                  <th>Title</th>
-                  <th>Word Count</th>
-                  <th>Outbound</th>
-                  <th>Incoming</th>
-                  <th>Tags</th>
-                </tr>
-              </thead>
-              <tbody id="pages-list-body"></tbody>
-            </table>
-          </div>
+          <div id="pagesBreadcrumb" class="pages-breadcrumb"></div>
+          <div id="pagesFolderContent" class="pages-folder-content"></div>
         </div>
       </div>
 
@@ -1081,6 +1062,7 @@
         </div>
       </main>
 
+      <!-- :::::::::::::::::::::::::: FOOTER :::::::::::::::::::::::::: -->
       <footer class="footer">
         <div class="footer-signature">
           <a
@@ -1157,6 +1139,7 @@
         </div>
       </div>
     </div>
+
     <!-- :::::::::::::::::::::::::: DUPLICATE URL MERGE MODAL :::::::::::::::::::::::::: -->
     <div id="duplicateUrlModal" class="modal">
       <div class="modal-content confirm-delete-content">

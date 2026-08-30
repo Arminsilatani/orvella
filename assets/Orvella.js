@@ -146,6 +146,7 @@
   let saveTimeout;
   let editingPageId = null;
   let activePagesTab = "actual";
+  let currentFolderPath = "/";
 
   /* :::::::::::::::::::::::::: DUPLICATE URL MERGE STATE :::::::::::::::::::::::::: */
   let pendingMergeData = null;
@@ -200,6 +201,14 @@
       display = display.slice(0, -1);
     if (!display) display = "/";
     return display;
+  }
+
+  function getUrlGroup(url) {
+    const path = displayUrl(url);
+    if (path === "/") return "/ (root)";
+    const parts = path.split("/").filter(Boolean);
+    if (parts.length === 0) return "/ (root)";
+    return "/" + parts[0];
   }
 
   function isValidUrlPath(value) {
@@ -1346,7 +1355,6 @@
   }
 
   /* :::::::::::::::::::::::::: EDIT PAGE – INCOMING LINKS & HEALTH :::::::::::::::::::::::::: */
-  // Only observed links (real links)
   function getEligibleIncomingLinks(pageId) {
     const observedLinks = getObservedLinks();
     const pagesMap = Object.fromEntries(state.pages.map((p) => [p.id, p]));
@@ -1361,7 +1369,6 @@
     });
   }
 
-  // All incoming links (both observed and intent)
   function getAllEligibleIncomingLinks(pageId) {
     const pagesMap = Object.fromEntries(state.pages.map((p) => [p.id, p]));
     return state.recommendations.filter((rec) => {
@@ -1385,7 +1392,6 @@
       };
     }
 
-    // Use ALL incoming links (observed + intent) for future strategy
     const incomingLinks = getAllEligibleIncomingLinks(pageId);
     const total = incomingLinks.length;
 
@@ -1550,7 +1556,6 @@
 
     let html = "";
 
-    // ساخت پیام با کلمه کلیدی قابل کلیک
     if (rec.suggestedKeyword) {
       html += `<p>Use <strong>${rec.type}</strong> anchor text: 
       <span class="clickable-keyword" data-keyword="${rec.suggestedKeyword.replace(/"/g, "&quot;")}" 
@@ -1569,7 +1574,6 @@
 
     container.innerHTML = html;
 
-    // اتصال event listener برای کپی
     const keywordSpan = container.querySelector(".clickable-keyword");
     if (keywordSpan) {
       keywordSpan.addEventListener("click", function () {
@@ -3604,7 +3608,9 @@
     document.getElementById("pagesTabActual")?.addEventListener("click", () => {
       activePagesTab = "actual";
       updatePagesTabUI();
-      renderPagesList(activePagesTab);
+      currentFolderPath = "/";
+      renderFolderBrowser();
+      renderBreadcrumb(currentFolderPath);
     });
 
     document
@@ -3612,12 +3618,10 @@
       ?.addEventListener("click", () => {
         activePagesTab = "planned";
         updatePagesTabUI();
-        renderPagesList(activePagesTab);
+        currentFolderPath = "/";
+        renderFolderBrowser();
+        renderBreadcrumb(currentFolderPath);
       });
-
-    elements.pageTitle.addEventListener("input", () =>
-      elements.pageTitle.classList.remove("field-error"),
-    );
     elements.pageUrl.addEventListener("input", () =>
       elements.pageUrl.classList.remove("field-error"),
     );
@@ -4029,33 +4033,70 @@
     if (!tbody || !panel) return;
 
     const items = computePlannedPagesToConvert();
-    let html = "";
+    if (items.length === 0) {
+      tbody.innerHTML = "";
+      panel.classList.add("is-empty");
+      if (badge) badge.textContent = "0 pages";
+      return;
+    }
+    panel.classList.remove("is-empty");
+    if (badge) badge.textContent = `${items.length} pages`;
+
+    const groups = {};
     items.forEach((item) => {
-      html += `<tr data-page-id="${item.page.id}">
-            <td><a href="${item.page.url}" class="page-link" target="_blank">${displayUrl(item.page.url)}</a></td>
-            <td>${item.incomingCount}</td>
-            <td>
-                <button class="convert-btn" data-page-id="${item.page.id}">Convert to Observed</button>
-            </td>
-        </tr>`;
+      const groupName = getUrlGroup(item.page.url);
+      if (!groups[groupName]) groups[groupName] = [];
+      groups[groupName].push(item);
     });
+
+    const sortedGroupNames = Object.keys(groups).sort((a, b) =>
+      a.localeCompare(b),
+    );
+
+    let html = "";
+    sortedGroupNames.forEach((groupName) => {
+      const groupItems = groups[groupName];
+      const groupId = "group-" + groupName.replace(/[^a-zA-Z0-9]/g, "-");
+      html += `
+      <tr class="group-header collapsed" data-group-id="${groupId}">
+        <td colspan="3">
+          <span class="group-toggle">▸</span>
+          ${groupName} <span style="opacity:0.6; font-size:12px;">(${groupItems.length} page${groupItems.length !== 1 ? "s" : ""})</span>
+        </td>
+      </tr>`;
+      groupItems.forEach((item) => {
+        html += `
+        <tr class="group-item-row" data-group-parent="${groupId}" data-page-id="${item.page.id}" style="display: none;">
+          <td><a href="${item.page.url}" class="page-link" target="_blank">${displayUrl(item.page.url)}</a></td>
+          <td>${item.incomingCount}</td>
+          <td>
+            <button class="convert-btn" data-page-id="${item.page.id}">Convert to Observed</button>
+          </td>
+        </tr>`;
+      });
+    });
+
     tbody.innerHTML = html;
 
-    if (items.length === 0) {
-      panel.classList.add("is-empty");
-    } else {
-      panel.classList.remove("is-empty");
-    }
-
-    if (badge) badge.textContent = `${items.length} pages`;
+    tbody.querySelectorAll(".group-header").forEach((header) => {
+      header.addEventListener("click", function (e) {
+        if (e.target.closest("a") || e.target.closest("button")) return;
+        const groupId = this.getAttribute("data-group-id");
+        const isCollapsed = this.classList.toggle("collapsed");
+        const rows = tbody.querySelectorAll(
+          `tr[data-group-parent="${groupId}"]`,
+        );
+        rows.forEach((row) => {
+          row.style.display = isCollapsed ? "none" : "";
+        });
+      });
+    });
 
     tbody.querySelectorAll(".convert-btn").forEach((btn) => {
       btn.addEventListener("click", function (e) {
         e.stopPropagation();
         const pageId = this.getAttribute("data-page-id");
-        if (pageId) {
-          convertPlannedToActual(pageId);
-        }
+        if (pageId) convertPlannedToActual(pageId);
       });
     });
 
@@ -4063,9 +4104,7 @@
       row.addEventListener("click", function (e) {
         if (e.target.closest(".convert-btn")) return;
         const pageId = this.getAttribute("data-page-id");
-        if (pageId) {
-          openEditPageModal(pageId);
-        }
+        if (pageId) openEditPageModal(pageId);
       });
     });
   }
@@ -4347,7 +4386,9 @@
   function openPagesListModal() {
     activePagesTab = "actual";
     updatePagesTabUI();
-    renderPagesList(activePagesTab);
+    currentFolderPath = "/";
+    renderFolderBrowser();
+    renderBreadcrumb(currentFolderPath);
     openModal(document.getElementById("pagesListModal"));
   }
 
@@ -4362,16 +4403,84 @@
     }
   }
 
-  function renderPagesList(filterType = "actual") {
-    const tbody = document.getElementById("pages-list-body");
-    if (!tbody) return;
+  function getPathSegments(url) {
+    const path = displayUrl(url);
+    if (path === "/") return [];
+    return path.split("/").filter(Boolean);
+  }
 
-    const filteredPages = state.pages.filter(
-      (p) => (p.pageType || "actual") === filterType,
+  function buildFolderTree(pages) {
+    const tree = { path: "/", segments: [], page: null, children: {} };
+    pages.forEach((page) => {
+      const segments = getPathSegments(page.url);
+      let node = tree;
+      segments.forEach((segment, index) => {
+        if (!node.children[segment]) {
+          node.children[segment] = {
+            path: "/" + segments.slice(0, index + 1).join("/"),
+            segments: segments.slice(0, index + 1),
+            page: null,
+            children: {},
+          };
+        }
+        node = node.children[segment];
+      });
+      node.page = page;
+    });
+    return tree;
+  }
+
+  function findFolderNode(tree, path) {
+    if (path === "/") return tree;
+    const segments = getPathSegments(path);
+    let node = tree;
+    for (const seg of segments) {
+      if (node.children[seg]) node = node.children[seg];
+      else return null;
+    }
+    return node;
+  }
+
+  function renderBreadcrumb(path) {
+    const breadcrumbEl = document.getElementById("pagesBreadcrumb");
+    if (!breadcrumbEl) return;
+    const segments = getPathSegments(path);
+    let html = `<a href="#" class="breadcrumb-link" data-path="/">Root</a>`;
+    let accumulated = "";
+    segments.forEach((seg) => {
+      accumulated += "/" + seg;
+      html += ` <span class="breadcrumb-sep">/</span> <a href="#" class="breadcrumb-link" data-path="${accumulated}">${seg}</a>`;
+    });
+    breadcrumbEl.innerHTML = html;
+    breadcrumbEl.querySelectorAll(".breadcrumb-link").forEach((link) => {
+      link.addEventListener("click", (e) => {
+        e.preventDefault();
+        const newPath = link.getAttribute("data-path");
+        currentFolderPath = newPath;
+        renderFolderBrowser();
+        renderBreadcrumb(currentFolderPath);
+      });
+    });
+  }
+
+  function renderFolderBrowser() {
+    const container = document.getElementById("pagesFolderContent");
+    if (!container) return;
+
+    const pagesForTab = state.pages.filter(
+      (p) => (p.pageType || "actual") === activePagesTab,
     );
-    const isPlanned = filterType === "planned";
+    const tree = buildFolderTree(pagesForTab);
+    const node = findFolderNode(tree, currentFolderPath);
+    if (!node) {
+      container.innerHTML = `<div class="empty-state"><p>Path not found.</p></div>`;
+      return;
+    }
+
     let html = "";
-    filteredPages.forEach((page) => {
+    if (node.page) {
+      const page = node.page;
+      const isPlanned = activePagesTab === "planned";
       const outboundCount = state.recommendations.filter(
         (rec) =>
           rec.sourceId === page.id &&
@@ -4382,26 +4491,52 @@
           rec.targetId === page.id &&
           (isPlanned ? rec.linkType === "intent" : rec.linkType === "observed"),
       ).length;
-      const topicTags = getTopicTags(page);
-      const tagsStr = topicTags.length ? topicTags.join(", ") : "—";
-      html += `<tr data-page-id="${page.id}">
-                <td>${page.title}</td>
-                <td>${page.wordCount}</td>
-                <td>${outboundCount}</td>
-                <td>${incomingCount}</td>
-                <td>${tagsStr}</td>
-            </tr>`;
-    });
-    tbody.innerHTML =
-      html ||
-      `<tr><td colspan="5" class="empty-table-message">No ${filterType === "actual" ? "actual" : "planned"} pages found.</td></tr>`;
+      html += `<div class="folder-item page-item" data-page-id="${page.id}">
+              <span class="folder-icon">📄</span>
+              <span class="folder-name">${displayUrl(page.url)}</span>
+              <span class="folder-meta">Out: ${outboundCount} | In: ${incomingCount}</span>
+            </div>`;
+    }
 
-    tbody.onclick = (e) => {
-      const row = e.target.closest("tr");
-      if (!row) return;
-      const pageId = row.getAttribute("data-page-id");
-      if (pageId) openEditPageModal(pageId);
-    };
+    const childFolders = Object.values(node.children);
+    childFolders.sort((a, b) =>
+      a.segments[a.segments.length - 1].localeCompare(
+        b.segments[b.segments.length - 1],
+      ),
+    );
+    childFolders.forEach((child) => {
+      const folderName = child.segments[child.segments.length - 1];
+      const childPath = child.path;
+      const childHasPage = child.page ? true : false;
+      html += `<div class="folder-item" data-folder-path="${childPath}">
+              <span class="folder-icon">📁</span>
+              <span class="folder-name">${folderName}</span>
+              ${childHasPage ? `<span class="badge badge-low">page</span>` : ""}
+            </div>`;
+    });
+
+    if (!html) {
+      html = `<div class="empty-state"><p>No pages or folders in this path.</p></div>`;
+    }
+
+    container.innerHTML = html;
+
+    container
+      .querySelectorAll(".folder-item[data-folder-path]")
+      .forEach((item) => {
+        item.addEventListener("click", () => {
+          currentFolderPath = item.getAttribute("data-folder-path");
+          renderFolderBrowser();
+          renderBreadcrumb(currentFolderPath);
+        });
+      });
+
+    container.querySelectorAll(".page-item[data-page-id]").forEach((item) => {
+      item.addEventListener("click", () => {
+        const pageId = item.getAttribute("data-page-id");
+        if (pageId) openEditPageModal(pageId);
+      });
+    });
   }
 
   /* :::::::::::::::::::::::::: ANCHOR DETAILS MODAL :::::::::::::::::::::::::: */

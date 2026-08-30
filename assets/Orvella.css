@@ -1,4 +1,4 @@
-/* :::::::::::::::::::::::::: FONTS :::::::::::::::::::::::::: */
+/* :::::::::::::::::::::::::: FONT FACES :::::::::::::::::::::::::: */
 @font-face {
   font-family: "Kalameh";
   src:
@@ -19,7 +19,7 @@
   font-display: swap;
 }
 
-/* :::::::::::::::::::::::::: ROOT VARIABLES :::::::::::::::::::::::::: */
+/* :::::::::::::::::::::::::: CSS VARIABLES :::::::::::::::::::::::::: */
 :root {
   --bg: #0d0d0d;
   --surface: #151515;
@@ -44,7 +44,7 @@
   --loader-anim-speed: 1.5s;
 }
 
-/* :::::::::::::::::::::::::: RESET & BASE :::::::::::::::::::::::::: */
+/* :::::::::::::::::::::::::: GLOBAL RESET :::::::::::::::::::::::::: */
 * {
   box-sizing: border-box;
 }
@@ -92,7 +92,7 @@ textarea:focus-visible {
   display: none !important;
 }
 
-/* :::::::::::::::::::::::::: SCROLLBAR :::::::::::::::::::::::::: */
+/* :::::::::::::::::::::::::: CUSTOM SCROLLBAR :::::::::::::::::::::::::: */
 ::-webkit-scrollbar {
   width: var(--scrollbar-width);
   height: var(--scrollbar-width);
@@ -113,7 +113,7 @@ textarea:focus-visible {
   background-color: var(--scrollbar-thumb-hover);
 }
 
-/* :::::::::::::::::::::::::: LOADER :::::::::::::::::::::::::: */
+/* :::::::::::::::::::::::::: PAGE LOADER :::::::::::::::::::::::::: */
 .fullpage-loader {
   position: fixed;
   inset: 0;
@@ -206,7 +206,7 @@ textarea:focus-visible {
   }
 }
 
-/* :::::::::::::::::::::::::: HEADER :::::::::::::::::::::::::: */
+/* :::::::::::::::::::::::::: SITE HEADER :::::::::::::::::::::::::: */
 .glass-header {
   background: rgba(255, 255, 255, 0.03);
   backdrop-filter: blur(10px);
@@ -259,14 +259,14 @@ textarea:focus-visible {
   margin: 16px auto 0;
 }
 
-/* :::::::::::::::::::::::::: APP SHELL :::::::::::::::::::::::::: */
+/* :::::::::::::::::::::::::: APP CONTAINER :::::::::::::::::::::::::: */
 .app-shell {
   width: min(100% - 32px, 1120px);
   margin: 0 auto;
   padding: 34px 0 64px;
 }
 
-/* :::::::::::::::::::::::::: COMMON TYPOGRAPHY :::::::::::::::::::::::::: */
+/* :::::::::::::::::::::::::: TYPOGRAPHY HELPERS :::::::::::::::::::::::::: */
 .eyebrow {
   display: inline-block;
   color: var(--accent);
@@ -309,7 +309,7 @@ textarea:focus-visible {
   margin-top: 0;
 }
 
-/* :::::::::::::::::::::::::: FORMS & MODALS BASE :::::::::::::::::::::::::: */
+/* :::::::::::::::::::::::::: FORM ELEMENTS :::::::::::::::::::::::::: */
 form {
   margin-top: 22px;
 }
@@ -377,7 +377,7 @@ textarea {
   font-size: 13px;
 }
 
-/* :::::::::::::::::::::::::: UNIFIED PREFIX STYLES :::::::::::::::::::::::::: */
+/* :::::::::::::::::::::::::: PREFIXED FIELDS :::::::::::::::::::::::::: */
 #addPageModal .field-group,
 #editPageModal .field-group {
   position: relative;
@@ -410,7 +410,7 @@ textarea {
   transform: none;
 }
 
-/* :::::::::::::::::::::::::: NEON CHECKBOX LABEL :::::::::::::::::::::::::: */
+/* :::::::::::::::::::::::::: CHECKBOX LABEL :::::::::::::::::::::::::: */
 .global-check-label {
   display: flex;
   align-items: center;
@@ -475,7 +475,7 @@ textarea {
   font-weight: 600;
 }
 
-/* :::::::::::::::::::::::::: TAG LIST IN SETTINGS :::::::::::::::::::::::::: */
+/* :::::::::::::::::::::::::: TAG MANAGEMENT :::::::::::::::::::::::::: */
 .tags-list {
   display: flex;
   flex-wrap: wrap;
@@ -611,7 +611,7 @@ textarea {
   }
 }
 
-/* :::::::::::::::::::::::::: NEON DOT CHECKBOX :::::::::::::::::::::::::: */
+/* :::::::::::::::::::::::::: NEON DOT INDICATOR :::::::::::::::::::::::::: */
 .neon-dot-indicator {
   display: inline-block;
   width: 20px;
@@ -648,7 +648,7 @@ textarea {
   filter: drop-shadow(0 0 2px var(--c-on));
 }
 
-/* :::::::::::::::::::::::::: PRIORITY BAR :::::::::::::::::::::::::: */
+/* :::::::::::::::::::::::::: PRIORITY SELECTOR :::::::::::::::::::::::::: */
 .priority-bar {
   display: flex;
   width: 100%;
@@ -760,7 +760,7 @@ textarea {
   background: var(--accent);
 }
 
-/* :::::::::::::::::::::::::: TOGGLE SET :::::::::::::::::::::::::: */
+/* :::::::::::::::::::::::::: TOGGLE GROUP :::::::::::::::::::::::::: */
 .toggle-set {
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -889,7 +889,7 @@ textarea {
   padding: 20px;
 }
 
-/* :::::::::::::::::::::::::: LINK TYPE BAR :::::::::::::::::::::::::: */
+/* :::::::::::::::::::::::::: LINK TYPE SELECTOR :::::::::::::::::::::::::: */
 .link-type-bar {
   display: flex;
   flex: 0 0 auto;
@@ -990,7 +990,7 @@ textarea {
   background: var(--accent-soft);
 }
 
-/* :::::::::::::::::::::::::: SETTINGS DISTRIBUTION :::::::::::::::::::::::::: */
+/* :::::::::::::::::::::::::: DISTRIBUTION SETTINGS :::::::::::::::::::::::::: */
 .distribution-grid {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
@@ -1067,12 +1067,11 @@ textarea {
   margin-bottom: 10px;
 }
 
-/* :::::::::::::::::::::::::: GLASS MODALS (CONSISTENT Z-INDEX) :::::::::::::::::::::::::: */
+/* :::::::::::::::::::::::::: MODALS :::::::::::::::::::::::::: */
 body.modal-open {
   overflow: hidden;
 }
 
-/* Modals — z-index from 3 to 10 */
 .modal {
   display: none;
   position: fixed;
@@ -1083,7 +1082,6 @@ body.modal-open {
   align-items: center;
 }
 
-/* z-index: 3 — General modals (Add, Settings, Pages, Confirm, Auth) */
 #addPageModal,
 #settingsModal,
 #pagesListModal,
@@ -1092,12 +1090,10 @@ body.modal-open {
   z-index: 3;
 }
 
-/* z-index: 4 — Anchor details modal (above general modals) */
 #anchorDetailsModal {
   z-index: 4;
 }
 
-/* z-index: 5 — Edit page modal (above all modals) */
 #editPageModal {
   z-index: 5;
 }
@@ -1189,12 +1185,14 @@ body.modal-open {
 #editPageModal .field-group:has(textarea) {
   overflow: hidden;
 }
+
 #duplicateUrlModal .confirm-delete-text {
   margin-bottom: 20px;
   color: var(--text);
   font-size: 15px;
   line-height: 1.6;
 }
+
 @keyframes modalIn {
   from {
     opacity: 0;
@@ -1206,7 +1204,7 @@ body.modal-open {
   }
 }
 
-/* :::::::::::::::::::::::::: AUTH OVERLAY :::::::::::::::::::::::::: */
+/* :::::::::::::::::::::::::: AUTHENTICATION :::::::::::::::::::::::::: */
 .auth-header {
   margin-bottom: 24px;
   text-align: center;
@@ -1772,7 +1770,7 @@ body.modal-open {
   color: var(--muted);
 }
 
-/* :::::::::::::::::::::::::: STATUS PILL (CAPSULE DROPDOWN) :::::::::::::::::::::::::: */
+/* :::::::::::::::::::::::::: STATUS PILL :::::::::::::::::::::::::: */
 .status-cell {
   vertical-align: middle;
 }
@@ -1803,14 +1801,12 @@ body.modal-open {
 }
 
 .status-pill-options {
-  /* Remove container box */
   background: none;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
   border: none;
   border-radius: 0;
   padding: 0;
-  /* Layout settings preserved */
   position: absolute;
   top: 100%;
   left: 0;
@@ -1839,9 +1835,7 @@ body.modal-open {
   justify-content: center;
   padding: 6px 16px;
   border-radius: 20px;
-  /* Dark semi-transparent background */
   background: rgba(20, 20, 20, 0.75);
-  /* Blur effect */
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -1863,7 +1857,7 @@ body.modal-open {
   border-color: var(--accent);
 }
 
-/* :::::::::::::::::::::::::: STATUS PILL (CAPSULE DROPDOWN - OVERRIDE) :::::::::::::::::::::::::: */
+/* :::::::::::::::::::::::::: STATUS PILL OVERRIDE :::::::::::::::::::::::::: */
 .status-cell {
   vertical-align: middle;
 }
@@ -1947,8 +1941,7 @@ body.modal-open {
   border-color: var(--accent);
 }
 
-/* :::::::::::::::::::::::::: DISTRIBUTION ROW LAYOUT :::::::::::::::::::::::::: */
-/* Full row for Anchor Text Distribution */
+/* :::::::::::::::::::::::::: DISTRIBUTION LAYOUT :::::::::::::::::::::::::: */
 .distribution-row-full {
   display: flex;
   width: 100%;
@@ -1981,7 +1974,6 @@ body.modal-open {
   min-height: 0;
 }
 
-/* Two-column row */
 .distribution-row {
   display: flex;
   gap: 20px;
@@ -2099,7 +2091,7 @@ body.modal-open {
   border-bottom: none;
 }
 
-/* :::::::::::::::::::::::::: ANCHOR BAR AND TOP KEYWORDS :::::::::::::::::::::::::: */
+/* :::::::::::::::::::::::::: ANCHOR BAR & TOP KEYWORDS :::::::::::::::::::::::::: */
 .anchor-bar {
   display: flex;
   gap: 2px;
@@ -2259,10 +2251,9 @@ body.modal-open {
   background: rgba(255, 255, 255, 0.02);
 }
 
-/* :::::::::::::::::::::::::: PAGES LIST MODAL (STICKY HEADER) :::::::::::::::::::::::::: */
+/* :::::::::::::::::::::::::: PAGES LIST MODAL :::::::::::::::::::::::::: */
 .pages-list-modal-content {
   max-width: 860px;
-  /* Override overflow of general modal-content */
   overflow-y: hidden !important;
   display: flex;
   flex-direction: column;
@@ -2277,14 +2268,12 @@ body.modal-open {
 
 .pages-table {
   width: 100%;
-  /* Default value for other tables */
   border-collapse: collapse;
   font-size: 13px;
   color: var(--text);
   white-space: nowrap;
 }
 
-/* Override border-collapse separately for the pages list table */
 .pages-list-modal-content .pages-table {
   border-collapse: separate;
   border-spacing: 0;
@@ -2465,7 +2454,7 @@ input[type="number"] {
   user-select: none;
 }
 
-/* :::::::::::::::::::::::::: INTERNAL LINK OPPORTUNITIES PANEL :::::::::::::::::::::::::: */
+/* :::::::::::::::::::::::::: OPPORTUNITIES PANEL :::::::::::::::::::::::::: */
 .opportunity-pages {
   background: var(--surface-soft);
   border: 1px solid var(--border);
@@ -2594,7 +2583,7 @@ input[type="number"] {
   }
 }
 
-/* :::::::::::::::::::::::::: INLINE EXTRACTIONS :::::::::::::::::::::::::: */
+/* :::::::::::::::::::::::::: MISC COMPONENTS :::::::::::::::::::::::::: */
 .confirm-delete-content {
   max-width: 340px;
   text-align: center;
@@ -2748,7 +2737,6 @@ input[type="number"] {
   padding: 20px;
 }
 
-/* Making Anchor list items clickable */
 .keyword-item {
   cursor: pointer;
   transition: background-color 0.15s ease;
@@ -2849,6 +2837,67 @@ input[type="number"] {
 
 .clickable-keyword:hover {
   background: rgba(255, 143, 209, 0.1);
+}
+
+/* :::::::::::::::::::::::::: FOLDER BROWSER :::::::::::::::::::::::::: */
+.pages-breadcrumb {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 16px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+}
+
+.pages-breadcrumb .breadcrumb-link {
+  color: var(--accent);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.pages-breadcrumb .breadcrumb-link:hover {
+  text-decoration: underline;
+}
+
+.pages-breadcrumb .breadcrumb-sep {
+  color: var(--muted);
+}
+
+.pages-folder-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.folder-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.folder-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.folder-icon {
+  font-size: 18px;
+}
+
+.folder-name {
+  flex: 1;
+}
+
+.folder-meta {
+  font-size: 12px;
+  color: var(--muted);
 }
 
 /* :::::::::::::::::::::::::: MOBILE RESPONSIVE :::::::::::::::::::::::::: */
@@ -2993,7 +3042,6 @@ input[type="number"] {
     display: none;
   }
 
-  /* New mobile layout */
   .distribution-row-full {
     flex-direction: column;
   }
