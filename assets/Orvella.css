@@ -2811,6 +2811,46 @@ input[type="number"] {
   line-height: 1.4;
 }
 
+.anchor-recommendation-box {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 20px;
+  background: rgba(0, 0, 0, 0.08);
+  box-sizing: border-box;
+}
+
+.anchor-recommendation-box .suggestions-title {
+  margin: 0 0 12px 0;
+}
+
+#anchorRecommendationContent {
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.6;
+}
+
+#anchorRecommendationContent .highlight {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+#anchorRecommendationContent .no-data {
+  color: var(--muted);
+}
+
+.clickable-keyword {
+  color: var(--accent);
+  font-weight: 600;
+  cursor: pointer;
+  border-bottom: 1px dashed var(--accent);
+  transition: background 0.2s;
+}
+
+.clickable-keyword:hover {
+  background: rgba(255, 143, 209, 0.1);
+}
+
 /* :::::::::::::::::::::::::: MOBILE RESPONSIVE :::::::::::::::::::::::::: */
 @media (max-width: 768px) {
   .gauge-slider::-webkit-scrollbar {

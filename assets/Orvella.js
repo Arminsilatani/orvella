@@ -303,6 +303,22 @@
     return isValid;
   }
 
+  async function copyToClipboard(text) {
+    try {
+      await navigator.clipboard.writeText(text);
+      showToast(`"${text}" copied to clipboard`);
+    } catch (err) {
+      // Fallback for older browsers
+      const textarea = document.createElement("textarea");
+      textarea.value = text;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textarea);
+      showToast(`"${text}" copied to clipboard`);
+    }
+  }
+
   /* :::::::::::::::::::::::::: DOM ELEMENTS :::::::::::::::::::::::::: */
   const elements = {
     addPageModal: document.getElementById("addPageModal"),
@@ -1330,6 +1346,7 @@
   }
 
   /* :::::::::::::::::::::::::: EDIT PAGE – INCOMING LINKS & HEALTH :::::::::::::::::::::::::: */
+  // Only observed links (real links)
   function getEligibleIncomingLinks(pageId) {
     const observedLinks = getObservedLinks();
     const pagesMap = Object.fromEntries(state.pages.map((p) => [p.id, p]));
@@ -1342,6 +1359,224 @@
         rec.targetId === pageId && source.canLinkOut && target.canReceiveLinks
       );
     });
+  }
+
+  // All incoming links (both observed and intent)
+  function getAllEligibleIncomingLinks(pageId) {
+    const pagesMap = Object.fromEntries(state.pages.map((p) => [p.id, p]));
+    return state.recommendations.filter((rec) => {
+      const source = pagesMap[rec.sourceId];
+      const target = pagesMap[rec.targetId];
+      if (!source || !target) return false;
+      return (
+        rec.targetId === pageId && source.canLinkOut && target.canReceiveLinks
+      );
+    });
+  }
+
+  function getAnchorRecommendationForPage(pageId) {
+    const page = state.pages.find((p) => p.id === pageId);
+    if (!page) return null;
+
+    if (!page.canReceiveLinks) {
+      return {
+        type: "disabled",
+        message: "This page is not set to receive links.",
+      };
+    }
+
+    // Use ALL incoming links (observed + intent) for future strategy
+    const incomingLinks = getAllEligibleIncomingLinks(pageId);
+    const total = incomingLinks.length;
+
+    const target = {
+      primary: state.anchorDistribution.primary,
+      secondary: state.anchorDistribution.secondary,
+      lsi: state.anchorDistribution.lsi,
+    };
+
+    const counts = { primary: 0, secondary: 0, lsi: 0 };
+    incomingLinks.forEach((rec) => {
+      const cat = classifyAnchorForLink(rec, state.pages);
+      if (cat in counts) counts[cat]++;
+    });
+
+    if (total === 0) {
+      let priorityTypes = ["primary", "secondary", "lsi"].sort(
+        (a, b) => target[b] - target[a],
+      );
+      let chosenType = null;
+      let chosenKeyword = null;
+      for (let type of priorityTypes) {
+        if (type === "primary" && page.primaryKeyword) {
+          chosenType = "primary";
+          chosenKeyword = page.primaryKeyword;
+          break;
+        } else if (type === "secondary" && page.secondaryKeywords.length) {
+          chosenType = "secondary";
+          chosenKeyword = page.secondaryKeywords[0];
+          break;
+        } else if (type === "lsi" && page.lsiKeywords.length) {
+          chosenType = "lsi";
+          chosenKeyword = page.lsiKeywords[0];
+          break;
+        }
+      }
+
+      if (!chosenType) {
+        return {
+          type: "no_keywords",
+          message:
+            "No primary/secondary/LSI keywords defined for this page. Add them to get anchor text suggestions.",
+          currentPct: { primary: 0, secondary: 0, lsi: 0 },
+          targetPct: target,
+        };
+      }
+
+      return {
+        type: chosenType,
+        suggestedKeyword: chosenKeyword,
+        currentPct: { primary: 0, secondary: 0, lsi: 0 },
+        targetPct: target,
+        message: `No incoming links yet (observed + planned). Start with ${chosenType} anchor text: "${chosenKeyword}"`,
+      };
+    }
+
+    const currentPct = {};
+    for (const type of ["primary", "secondary", "lsi"]) {
+      currentPct[type] = (counts[type] / total) * 100;
+    }
+
+    const deficits = {
+      primary: target.primary - currentPct.primary,
+      secondary: target.secondary - currentPct.secondary,
+      lsi: target.lsi - currentPct.lsi,
+    };
+
+    let maxDeficitType = null;
+    let maxDeficit = -Infinity;
+    for (const type of ["primary", "secondary", "lsi"]) {
+      if (deficits[type] > maxDeficit) {
+        maxDeficit = deficits[type];
+        maxDeficitType = type;
+      }
+    }
+
+    let suggestedKeyword = null;
+    if (maxDeficitType === "primary") {
+      suggestedKeyword = page.primaryKeyword || null;
+    } else if (maxDeficitType === "secondary") {
+      if (page.secondaryKeywords.length) {
+        let minCount = Infinity;
+        for (const kw of page.secondaryKeywords) {
+          const cnt = incomingLinks.filter(
+            (rec) => rec.anchorText === kw,
+          ).length;
+          if (cnt < minCount) {
+            minCount = cnt;
+            suggestedKeyword = kw;
+          }
+        }
+      }
+    } else if (maxDeficitType === "lsi") {
+      if (page.lsiKeywords.length) {
+        let minCount = Infinity;
+        for (const kw of page.lsiKeywords) {
+          const cnt = incomingLinks.filter(
+            (rec) => rec.anchorText === kw,
+          ).length;
+          if (cnt < minCount) {
+            minCount = cnt;
+            suggestedKeyword = kw;
+          }
+        }
+      }
+    }
+
+    if (!suggestedKeyword) {
+      const fallbackOrder = ["primary", "secondary", "lsi"].sort(
+        (a, b) => deficits[b] - deficits[a],
+      );
+      for (const type of fallbackOrder) {
+        let kw = null;
+        if (type === "primary") kw = page.primaryKeyword;
+        else if (type === "secondary" && page.secondaryKeywords.length)
+          kw = page.secondaryKeywords[0];
+        else if (type === "lsi" && page.lsiKeywords.length)
+          kw = page.lsiKeywords[0];
+        if (kw) {
+          maxDeficitType = type;
+          suggestedKeyword = kw;
+          break;
+        }
+      }
+    }
+
+    if (!suggestedKeyword) {
+      return {
+        type: "no_keywords",
+        message:
+          "No keywords available for the recommended anchor type. Add keywords to this page.",
+        currentPct,
+        targetPct: target,
+      };
+    }
+
+    return {
+      type: maxDeficitType,
+      suggestedKeyword,
+      currentPct,
+      targetPct: target,
+      deficits,
+      message: `Use ${maxDeficitType} anchor text: "${suggestedKeyword}" (based on observed + planned links)`,
+    };
+  }
+
+  function renderAnchorRecommendation(pageId) {
+    const container = document.getElementById("anchorRecommendationContent");
+    if (!container) return;
+
+    const rec = getAnchorRecommendationForPage(pageId);
+    if (!rec) {
+      container.innerHTML =
+        '<span class="no-data">No recommendation available.</span>';
+      return;
+    }
+
+    if (rec.type === "disabled" || rec.type === "no_keywords") {
+      container.innerHTML = `<span class="no-data">${rec.message}</span>`;
+      return;
+    }
+
+    let html = "";
+
+    // ساخت پیام با کلمه کلیدی قابل کلیک
+    if (rec.suggestedKeyword) {
+      html += `<p>Use <strong>${rec.type}</strong> anchor text: 
+      <span class="clickable-keyword" data-keyword="${rec.suggestedKeyword.replace(/"/g, "&quot;")}" 
+            title="Click to copy">${rec.suggestedKeyword}</span>
+    </p>`;
+    } else {
+      html += `<p>${rec.message}</p>`;
+    }
+
+    if (rec.currentPct && rec.targetPct) {
+      html += `<p style="font-size:12px; color:var(--muted); margin-top:6px;">
+      Current (obs+plan): P ${rec.currentPct.primary.toFixed(1)}% · S ${rec.currentPct.secondary.toFixed(1)}% · L ${rec.currentPct.lsi.toFixed(1)}%<br>
+      Target: P ${rec.targetPct.primary}% · S ${rec.targetPct.secondary}% · L ${rec.targetPct.lsi}%
+    </p>`;
+    }
+
+    container.innerHTML = html;
+
+    // اتصال event listener برای کپی
+    const keywordSpan = container.querySelector(".clickable-keyword");
+    if (keywordSpan) {
+      keywordSpan.addEventListener("click", function () {
+        const keyword = this.getAttribute("data-keyword");
+        if (keyword) copyToClipboard(keyword);
+      });
+    }
   }
 
   function calculateAnchorDistributionHealth(pageId) {
@@ -1625,6 +1860,7 @@
       adjustModalPrefixes(elements.editPageModal);
       renderIncomingLinks(pageId);
       updateEditPageGauges(pageId);
+      renderAnchorRecommendation(pageId);
     });
   }
 
@@ -2022,6 +2258,7 @@
     );
     renderEditRecommendations(pageId);
     renderIncomingLinks(pageId);
+    renderAnchorRecommendation(pageId);
   }
 
   async function handleEditPageSave() {
@@ -3795,13 +4032,12 @@
     let html = "";
     items.forEach((item) => {
       html += `<tr data-page-id="${item.page.id}">
-                <td><span class="page-link">${item.page.title}</span></td>
-                <td><a href="${item.page.url}" class="page-link" target="_blank">${displayUrl(item.page.url)}</a></td>
-                <td>${item.incomingCount}</td>
-                <td>
-                    <button class="convert-btn" data-page-id="${item.page.id}">Convert to Observed</button>
-                </td>
-            </tr>`;
+            <td><a href="${item.page.url}" class="page-link" target="_blank">${displayUrl(item.page.url)}</a></td>
+            <td>${item.incomingCount}</td>
+            <td>
+                <button class="convert-btn" data-page-id="${item.page.id}">Convert to Observed</button>
+            </td>
+        </tr>`;
     });
     tbody.innerHTML = html;
 
