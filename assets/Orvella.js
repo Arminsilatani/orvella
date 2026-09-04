@@ -147,6 +147,7 @@
   let editingPageId = null;
   let activePagesTab = "actual";
   let currentFolderPath = "/";
+  let gaugeAnimationStarted = false;
 
   /* :::::::::::::::::::::::::: DUPLICATE URL MERGE STATE :::::::::::::::::::::::::: */
   let pendingMergeData = null;
@@ -217,23 +218,49 @@
     );
   }
 
-  function normalizeTerm(value) {
-    if (!value) return "";
-    return String(value)
-      .normalize("NFKC")
-      .toLowerCase()
-      .replace(/[\u200B-\u200D\uFEFF]/g, " ")
-      .replace(/[يى]/g, "ی")
-      .replace(/ك/g, "ک")
-      .replace(/[أإآٱ]/g, "ا")
-      .replace(/ة/g, "ه")
-      .replace(/ؤ/g, "و")
-      .replace(/ئ/g, "ی")
-      .replace(/[\u064B-\u065F\u0670\u06D6-\u06ED]/g, "")
-      .replace(/[^\p{L}\p{N}\s-]/gu, "")
-      .replace(/\s+/g, " ")
-      .trim();
-  }
+function normalizeTerm(value) {
+  if (value == null) return "";
+
+  return String(value)
+    .normalize("NFKC")
+    .toLowerCase()
+    // zero-width + bidi marks
+    .replace(/[\u200B-\u200D\uFEFF\u200E\u200F\u061C\u2066-\u2069]/g, "")
+    // tatweel
+    .replace(/ـ/g, "")
+    // Persian/Arabic normalization
+    .replace(/[يى]/g, "ی")
+    .replace(/ك/g, "ک")
+    .replace(/[أإآٱ]/g, "ا")
+    .replace(/ة/g, "ه")
+    .replace(/ؤ/g, "و")
+    .replace(/ئ/g, "ی")
+    // diacritics
+    .replace(/[\u064B-\u065F\u0670\u06D6-\u06ED]/g, "")
+    // keep letters/numbers/spaces/hyphen only
+    .replace(/[^\p{L}\p{N}\s-]/gu, " ")
+    // normalize all whitespace
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function canonicalizeForMatch(value) {
+  if (value == null) return "";
+  return String(value)
+    .normalize("NFKC")
+    .toLowerCase()
+    .replace(/[\u200B-\u200D\uFEFF\u200E\u200F\u061C\u2066-\u2069]/g, "")
+    .replace(/ـ/g, "")
+    .replace(/[يى]/g, "ی")
+    .replace(/ك/g, "ک")
+    .replace(/[أإآٱ]/g, "ا")
+    .replace(/ة/g, "ه")
+    .replace(/ؤ/g, "و")
+    .replace(/ئ/g, "ی")
+    .replace(/[\u064B-\u065F\u0670\u06D6-\u06ED]/g, "")
+    .replace(/[^\p{L}\p{N}]/gu, "")
+    .trim();
+}
 
   function isValidEmail(email) {
     const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -312,21 +339,105 @@
     return isValid;
   }
 
-  async function copyToClipboard(text) {
-    try {
-      await navigator.clipboard.writeText(text);
-      showToast(`"${text}" copied to clipboard`);
-    } catch (err) {
-      // Fallback for older browsers
-      const textarea = document.createElement("textarea");
-      textarea.value = text;
-      document.body.appendChild(textarea);
-      textarea.select();
-      document.execCommand("copy");
-      document.body.removeChild(textarea);
-      showToast(`"${text}" copied to clipboard`);
+async function copyToClipboard(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    showToast(`"${text}" copied to clipboard`);
+  } catch (err) {
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand("copy");
+    document.body.removeChild(textarea);
+    showToast(`"${text}" copied to clipboard`);
+  }
+}
+  
+function sweepGaugeNeedle(needle, targetRotation) {
+  // اگر قبلاً انیمیشن جاروب انجام شده، فقط مقدار نهایی را تنظیم کن
+  if (needle.dataset.swept === "true") {
+    needle.dataset.baseRotation = targetRotation;
+    return;
+  }
+
+  // جلوگیری از اجرای همزمان
+  if (needle.dataset.sweeping === "true") return;
+
+  needle.dataset.sweeping = "true";
+
+  const startRotation = -90;      // 0%
+  const settleDuration = 800;     // مدت زمان حرکت به سمت هدف (میلی‌ثانیه)
+
+  // شروع از زاویه ۰
+  needle.style.transform = `rotate(${startRotation}deg)`;
+  needle.style.transformOrigin = "70px 70px";
+
+  const startTime = performance.now();
+
+  function animateToTarget(timestamp) {
+    const elapsed = timestamp - startTime;
+    const progress = Math.min(1, elapsed / settleDuration);
+    const eased = easeInOutCubic(progress);  // حرکت نرم
+    const rotation = startRotation + (targetRotation - startRotation) * eased;
+
+    needle.style.transform = `rotate(${rotation}deg)`;
+    needle.style.transformOrigin = "70px 70px";
+
+    if (progress < 1) {
+      requestAnimationFrame(animateToTarget);
+    } else {
+      // پایان انیمیشن اولیه
+      needle.dataset.swept = "true";
+      needle.dataset.sweeping = "false";
+      needle.dataset.baseRotation = targetRotation;
+      needle.style.transform = `rotate(${targetRotation}deg)`;
     }
   }
+
+  requestAnimationFrame(animateToTarget);
+}
+
+// تابع easing (اگر ندارید، اضافه کنید)
+function easeInOutCubic(t) {
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+}
+
+function easeInOutCubic(t) {
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+}
+
+function easeInOutCubic(t) {
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+}
+
+function startGaugeAnimation() {
+  if (gaugeAnimationStarted) return;
+  gaugeAnimationStarted = true;
+
+  function tick() {
+    const now = Date.now();
+    const offset = Math.sin(now / 250) * 2.5;
+
+    document.querySelectorAll(".gauge-needle").forEach((needle) => {
+      if (needle.dataset.sweeping === "true") return; // در حال انیمیشن اولیه
+      const base = parseFloat(needle.dataset.baseRotation || "0");
+      needle.style.transform = `rotate(${base + offset}deg)`;
+      needle.style.transformOrigin = "70px 70px";
+    });
+
+    requestAnimationFrame(tick);
+  }
+
+  requestAnimationFrame(tick);
+}
+
+function resetGaugeSweep() {
+  document.querySelectorAll(".gauge-needle").forEach(needle => {
+    needle.dataset.swept = "false";
+    needle.dataset.sweeping = "false";
+  });
+}
 
   /* :::::::::::::::::::::::::: DOM ELEMENTS :::::::::::::::::::::::::: */
   const elements = {
@@ -467,6 +578,19 @@
       openPagesListModal();
     });
 
+    const refreshBtn = document.createElement("button");
+    refreshBtn.className = "sidebar-item sidebar-today-action";
+    refreshBtn.innerHTML = `
+      <svg class="sidebar-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+      </svg>
+      <span class="sidebar-label">Refresh</span>
+    `;
+    refreshBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      refreshData();
+    });
+
     const settingsBtn = document.createElement("button");
     settingsBtn.className = "sidebar-item sidebar-today-action";
     settingsBtn.innerHTML = `<svg class="sidebar-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" /></svg> <span class="sidebar-label">Settings</span>`;
@@ -477,6 +601,7 @@
 
     todayList.appendChild(addBtn);
     todayList.appendChild(pagesBtn);
+    todayList.appendChild(refreshBtn);
     todayList.appendChild(settingsBtn);
   }
 
@@ -593,72 +718,116 @@
     return false;
   }
 
-  async function loadState() {
-    if (!currentUser) return;
-    const { data, error } = await supabase
-      .from("orvella")
-      .select("data")
-      .eq("id", currentUser.id)
-      .maybeSingle();
-    if (error) {
-      console.error("Failed to load state:", error);
-      return;
-    }
-    if (data?.data) {
-      state = data.data;
-      state.pages = state.pages || [];
-      state.recommendations = state.recommendations || [];
-      state.rules = state.rules || {
-        maxOutbound: 3,
-        maxInbound: 5,
-        requireSharedKeyword: false,
-      };
-      state.anchorDistribution = state.anchorDistribution || {
-        primary: 35,
-        secondary: 45,
-        lsi: 20,
-      };
-      state.tags = state.tags || [];
-      state.languages = state.languages || [];
-      state.pages = state.pages.map((p) => {
-        let language = p.language || null;
-        let tags = p.tags || [];
-        if (!language) {
-          const langTag = tags.find((t) => t.toLowerCase().startsWith("lang:"));
-          if (langTag) {
-            language = langTag.substring(5).toUpperCase();
-            tags = tags.filter((t) => !t.toLowerCase().startsWith("lang:"));
-          }
+async function loadState() {
+  if (!currentUser) return;
+  const { data, error } = await supabase
+    .from("orvella")
+    .select("data")
+    .eq("id", currentUser.id)
+    .maybeSingle();
+  if (error) {
+    console.error("Failed to load state:", error);
+    return;
+  }
+  if (data?.data) {
+    state = data.data;
+    state.pages = state.pages || [];
+    state.recommendations = state.recommendations || [];
+    state.rules = state.rules || {
+      maxOutbound: 3,
+      maxInbound: 5,
+      requireSharedKeyword: false,
+    };
+    state.anchorDistribution = state.anchorDistribution || {
+      primary: 35,
+      secondary: 45,
+      lsi: 20,
+    };
+    state.tags = state.tags || [];
+    state.languages = state.languages || [];
+
+    state.pages = state.pages.map((p) => {
+      let language = p.language || null;
+      let tags = p.tags || [];
+      if (!language) {
+        const langTag = tags.find((t) => t.toLowerCase().startsWith("lang:"));
+        if (langTag) {
+          language = langTag.substring(5).toUpperCase();
+          tags = tags.filter((t) => !t.toLowerCase().startsWith("lang:"));
         }
-        return {
-          id: p.id,
-          title: p.title,
-          url: p.url,
-          primaryKeyword: p.primaryKeyword || "",
-          secondaryKeywords: p.secondaryKeywords || [],
-          lsiKeywords: p.lsiKeywords || [],
-          wordCount: p.wordCount || 0,
-          canLinkOut: p.canLinkOut !== false,
-          canReceiveLinks: p.canReceiveLinks !== false,
-          priority: p.priority || 3,
-          tags: tags,
-          pageType: p.pageType || "actual",
-          language: language,
-          excludeDensity: p.excludeDensity || false,
-        };
-      });
-      state.recommendations = state.recommendations.map((rec) => ({
-        ...rec,
-        linkType: rec.linkType || "observed",
-      }));
-      state.recommendations = state.recommendations.map((rec) => ({
-        ...rec,
-        isAuto: rec.isAuto === undefined ? false : rec.isAuto,
-      }));
-      actionStatuses = data.data.actionStatuses || {};
-    }
+      }
+
+      let secondaryKeywords = p.secondaryKeywords;
+      if (typeof secondaryKeywords === "string") {
+        secondaryKeywords = secondaryKeywords
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean);
+      } else if (!Array.isArray(secondaryKeywords)) {
+        secondaryKeywords = [];
+      }
+
+      let lsiKeywords = p.lsiKeywords;
+      if (typeof lsiKeywords === "string") {
+        lsiKeywords = lsiKeywords
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean);
+      } else if (!Array.isArray(lsiKeywords)) {
+        lsiKeywords = [];
+      }
+
+      return {
+        id: p.id,
+        title: p.title,
+        url: p.url,
+        primaryKeyword: p.primaryKeyword || "",
+        secondaryKeywords: secondaryKeywords,
+        lsiKeywords: lsiKeywords,
+        wordCount: p.wordCount || 0,
+        canLinkOut: p.canLinkOut !== false,
+        canReceiveLinks: p.canReceiveLinks !== false,
+        priority: p.priority || 3,
+        tags: tags,
+        pageType: p.pageType || "actual",
+        language: language,
+        excludeDensity: p.excludeDensity || false,
+      };
+    });
+
+    state.recommendations = state.recommendations.map((rec) => ({
+      ...rec,
+      linkType: rec.linkType || "observed",
+      isAuto: rec.isAuto === undefined ? false : rec.isAuto,
+    }));
+state.recommendations = state.recommendations.map(rec => {
+  rec.anchorType = classifyAnchorForLink(rec, state.pages);
+  return rec;
+});
+    actionStatuses = data.data.actionStatuses || {};
+  }
+}
+
+async function refreshData() {
+  if (!currentUser) {
+    alert("Please sign in to refresh data.");
+    return;
   }
 
+  showGlobalLoader();
+  try {
+    await loadState();
+    state.recommendations = buildRecommendations();
+    window.debugState = state;
+    renderOverviewGauges();
+    showToast("Data refreshed successfully.");
+  } catch (err) {
+    console.error("Refresh failed:", err);
+    showToast("Refresh failed. Please try again.");
+  } finally {
+    hideGlobalLoader();
+  }
+}
   /* :::::::::::::::::::::::::: AUTH FLOW :::::::::::::::::::::::::: */
   async function checkEmailExists(email) {
     const { data, error } = await supabase
@@ -1381,283 +1550,205 @@
     });
   }
 
-  function getAnchorRecommendationForPage(pageId) {
-    const page = state.pages.find((p) => p.id === pageId);
-    if (!page) return null;
+function getAnchorRecommendationForPage(pageId) {
+  const page = state.pages.find((p) => p.id === pageId);
+  if (!page) return null;
 
-    if (!page.canReceiveLinks) {
-      return {
-        type: "disabled",
-        message: "This page is not set to receive links.",
-      };
-    }
-
-    const incomingLinks = getAllEligibleIncomingLinks(pageId);
-    const total = incomingLinks.length;
-
-    const target = {
-      primary: state.anchorDistribution.primary,
-      secondary: state.anchorDistribution.secondary,
-      lsi: state.anchorDistribution.lsi,
-    };
-
-    const counts = { primary: 0, secondary: 0, lsi: 0 };
-    incomingLinks.forEach((rec) => {
-      const cat = classifyAnchorForLink(rec, state.pages);
-      if (cat in counts) counts[cat]++;
-    });
-
-    if (total === 0) {
-      let priorityTypes = ["primary", "secondary", "lsi"].sort(
-        (a, b) => target[b] - target[a],
-      );
-      let chosenType = null;
-      let chosenKeyword = null;
-      for (let type of priorityTypes) {
-        if (type === "primary" && page.primaryKeyword) {
-          chosenType = "primary";
-          chosenKeyword = page.primaryKeyword;
-          break;
-        } else if (type === "secondary" && page.secondaryKeywords.length) {
-          chosenType = "secondary";
-          chosenKeyword = page.secondaryKeywords[0];
-          break;
-        } else if (type === "lsi" && page.lsiKeywords.length) {
-          chosenType = "lsi";
-          chosenKeyword = page.lsiKeywords[0];
-          break;
-        }
-      }
-
-      if (!chosenType) {
-        return {
-          type: "no_keywords",
-          message:
-            "No primary/secondary/LSI keywords defined for this page. Add them to get anchor text suggestions.",
-          currentPct: { primary: 0, secondary: 0, lsi: 0 },
-          targetPct: target,
-        };
-      }
-
-      return {
-        type: chosenType,
-        suggestedKeyword: chosenKeyword,
-        currentPct: { primary: 0, secondary: 0, lsi: 0 },
-        targetPct: target,
-        message: `No incoming links yet (observed + planned). Start with ${chosenType} anchor text: "${chosenKeyword}"`,
-      };
-    }
-
-    const currentPct = {};
-    for (const type of ["primary", "secondary", "lsi"]) {
-      currentPct[type] = (counts[type] / total) * 100;
-    }
-
-    const deficits = {
-      primary: target.primary - currentPct.primary,
-      secondary: target.secondary - currentPct.secondary,
-      lsi: target.lsi - currentPct.lsi,
-    };
-
-    let maxDeficitType = null;
-    let maxDeficit = -Infinity;
-    for (const type of ["primary", "secondary", "lsi"]) {
-      if (deficits[type] > maxDeficit) {
-        maxDeficit = deficits[type];
-        maxDeficitType = type;
-      }
-    }
-
-    let suggestedKeyword = null;
-    if (maxDeficitType === "primary") {
-      suggestedKeyword = page.primaryKeyword || null;
-    } else if (maxDeficitType === "secondary") {
-      if (page.secondaryKeywords.length) {
-        let minCount = Infinity;
-        for (const kw of page.secondaryKeywords) {
-          const cnt = incomingLinks.filter(
-            (rec) => rec.anchorText === kw,
-          ).length;
-          if (cnt < minCount) {
-            minCount = cnt;
-            suggestedKeyword = kw;
-          }
-        }
-      }
-    } else if (maxDeficitType === "lsi") {
-      if (page.lsiKeywords.length) {
-        let minCount = Infinity;
-        for (const kw of page.lsiKeywords) {
-          const cnt = incomingLinks.filter(
-            (rec) => rec.anchorText === kw,
-          ).length;
-          if (cnt < minCount) {
-            minCount = cnt;
-            suggestedKeyword = kw;
-          }
-        }
-      }
-    }
-
-    if (!suggestedKeyword) {
-      const fallbackOrder = ["primary", "secondary", "lsi"].sort(
-        (a, b) => deficits[b] - deficits[a],
-      );
-      for (const type of fallbackOrder) {
-        let kw = null;
-        if (type === "primary") kw = page.primaryKeyword;
-        else if (type === "secondary" && page.secondaryKeywords.length)
-          kw = page.secondaryKeywords[0];
-        else if (type === "lsi" && page.lsiKeywords.length)
-          kw = page.lsiKeywords[0];
-        if (kw) {
-          maxDeficitType = type;
-          suggestedKeyword = kw;
-          break;
-        }
-      }
-    }
-
-    if (!suggestedKeyword) {
-      return {
-        type: "no_keywords",
-        message:
-          "No keywords available for the recommended anchor type. Add keywords to this page.",
-        currentPct,
-        targetPct: target,
-      };
-    }
-
+  if (!page.canReceiveLinks) {
     return {
-      type: maxDeficitType,
-      suggestedKeyword,
-      currentPct,
-      targetPct: target,
-      deficits,
-      message: `Use ${maxDeficitType} anchor text: "${suggestedKeyword}" (based on observed + planned links)`,
+      type: "disabled",
+      message: "This page is not set to receive links.",
+      currentPct: { primary: null, secondary: null, lsi: null, other: null },
+      targetPct: state.anchorDistribution,
     };
   }
 
-  function renderAnchorRecommendation(pageId) {
-    const container = document.getElementById("anchorRecommendationContent");
-    if (!container) return;
+const incomingLinks = state.recommendations.filter(rec => rec.targetId === pageId);  const total = incomingLinks.length;
 
-    const rec = getAnchorRecommendationForPage(pageId);
-    if (!rec) {
-      container.innerHTML =
-        '<span class="no-data">No recommendation available.</span>';
-      return;
+  const target = {
+    primary: Number(state.anchorDistribution?.primary ?? 35),
+    secondary: Number(state.anchorDistribution?.secondary ?? 35),
+    lsi: Number(state.anchorDistribution?.lsi ?? 30),
+  };
+
+  const toArr = (v) => {
+    if (Array.isArray(v)) return v;
+    if (typeof v === "string") return v.split(/[,\n;|،؛]+/g).map(s => s.trim()).filter(Boolean);
+    return [];
+  };
+
+  const hasPrimary = !!canonicalizeForMatch(page.primaryKeyword || "");
+  const hasSecondary = toArr(page.secondaryKeywords).length > 0;
+  const hasLsi = toArr(page.lsiKeywords).length > 0;
+
+  const counts = { primary: 0, secondary: 0, lsi: 0, other: 0 };
+
+  // استفاده از تابع استاندارد و تست‌شده
+  incomingLinks.forEach((rec) => {
+    const category = classifyAnchorForLink(rec, state.pages);
+    if (category in counts) {
+      counts[category]++;
+    } else {
+      counts.other++;
     }
+  });
 
-    if (rec.type === "disabled" || rec.type === "no_keywords") {
-      container.innerHTML = `<span class="no-data">${rec.message}</span>`;
-      return;
+  const currentPct = {
+    primary: hasPrimary ? (total ? (counts.primary / total) * 100 : 0) : null,
+    secondary: hasSecondary ? (total ? (counts.secondary / total) * 100 : 0) : null,
+    lsi: hasLsi ? (total ? (counts.lsi / total) * 100 : 0) : null,
+    other: total ? (counts.other / total) * 100 : 0,
+  };
+
+  if (total === 0) {
+    return {
+      type: hasPrimary ? "primary" : hasSecondary ? "secondary" : hasLsi ? "lsi" : "none",
+      suggestedKeyword: hasPrimary
+        ? page.primaryKeyword
+        : hasSecondary
+        ? toArr(page.secondaryKeywords)[0] || ""
+        : hasLsi
+        ? toArr(page.lsiKeywords)[0] || ""
+        : "",
+      currentPct,
+      targetPct: target,
+      deficits: { primary: null, secondary: null, lsi: null },
+      message: "No incoming links yet. Start with a keyword-targeted anchor.",
+    };
+  }
+
+  const deficits = {
+    primary: hasPrimary ? target.primary - (currentPct.primary ?? 0) : -Infinity,
+    secondary: hasSecondary ? target.secondary - (currentPct.secondary ?? 0) : -Infinity,
+    lsi: hasLsi ? target.lsi - (currentPct.lsi ?? 0) : -Infinity,
+  };
+
+  let maxDeficitType = null;
+  let maxDeficit = -Infinity;
+  for (const type of ["primary", "secondary", "lsi"]) {
+    if (deficits[type] > maxDeficit) {
+      maxDeficit = deficits[type];
+      maxDeficitType = type;
     }
+  }
 
-    let html = "";
+  let suggestedKeyword = "";
+  if (maxDeficitType === "primary") suggestedKeyword = page.primaryKeyword || "";
+  else if (maxDeficitType === "secondary") suggestedKeyword = toArr(page.secondaryKeywords)[0] || "";
+  else if (maxDeficitType === "lsi") suggestedKeyword = toArr(page.lsiKeywords)[0] || "";
 
-    if (rec.suggestedKeyword) {
-      html += `<p>Use <strong>${rec.type}</strong> anchor text: 
+  return {
+    type: maxDeficitType,
+    suggestedKeyword,
+    currentPct,
+    targetPct: target,
+    deficits,
+    counts,
+    message: maxDeficitType
+      ? `Use ${maxDeficitType} anchor text: "${suggestedKeyword}" (based on observed + planned links)`
+      : "No anchor deficit detected.",
+  };
+}
+
+function renderAnchorRecommendation(pageId) {
+  const container = document.getElementById("anchorRecommendationContent");
+  if (!container) return;
+
+  const rec = getAnchorRecommendationForPage(pageId);
+  if (!rec) {
+    container.innerHTML = '<span class="no-data">No recommendation available.</span>';
+    return;
+  }
+
+  if (rec.type === "disabled" || rec.type === "no_keywords") {
+    container.innerHTML = `<span class="no-data">${rec.message}</span>`;
+    return;
+  }
+
+  let html = "";
+
+  if (rec.suggestedKeyword) {
+    html += `<p>Use <strong>${rec.type}</strong> anchor text: 
       <span class="clickable-keyword" data-keyword="${rec.suggestedKeyword.replace(/"/g, "&quot;")}" 
             title="Click to copy">${rec.suggestedKeyword}</span>
     </p>`;
-    } else {
-      html += `<p>${rec.message}</p>`;
-    }
+  } else {
+    html += `<p>${rec.message}</p>`;
+  }
 
-    if (rec.currentPct && rec.targetPct) {
-      html += `<p style="font-size:12px; color:var(--muted); margin-top:6px;">
-      Current (obs+plan): P ${rec.currentPct.primary.toFixed(1)}% · S ${rec.currentPct.secondary.toFixed(1)}% · L ${rec.currentPct.lsi.toFixed(1)}%<br>
-      Target: P ${rec.targetPct.primary}% · S ${rec.targetPct.secondary}% · L ${rec.targetPct.lsi}%
+  if (rec.currentPct && rec.targetPct) {
+    const fmt = (val) => (val === null || val === undefined) ? "-" : val.toFixed(1) + "%";
+
+    html += `<p style="font-size:12px; color:var(--muted); margin-top:6px;">
+      Current (obs+plan): P ${fmt(rec.currentPct.primary)} · S ${fmt(rec.currentPct.secondary)} · L ${fmt(rec.currentPct.lsi)}<br>
+      Target: P ${fmt(rec.targetPct.primary)} · S ${fmt(rec.targetPct.secondary)} · L ${fmt(rec.targetPct.lsi)}
     </p>`;
-    }
-
-    container.innerHTML = html;
-
-    const keywordSpan = container.querySelector(".clickable-keyword");
-    if (keywordSpan) {
-      keywordSpan.addEventListener("click", function () {
-        const keyword = this.getAttribute("data-keyword");
-        if (keyword) copyToClipboard(keyword);
-      });
-    }
   }
 
-  function calculateAnchorDistributionHealth(pageId) {
-    const page = state.pages.find((p) => p.id === pageId);
-    if (!page) return null;
+  container.innerHTML = html;
 
-    if (!page.canReceiveLinks) {
-      return {
-        score: null,
-        status: "not_applicable",
-        reason: "incoming_links_disabled",
-        eligibleCount: 0,
-      };
-    }
-
-    const incomingLinks = getEligibleIncomingLinks(pageId);
-
-    if (incomingLinks.length === 0) {
-      return {
-        score: null,
-        status: "insufficient_data",
-        reason: "no_eligible_incoming_links",
-        eligibleCount: 0,
-      };
-    }
-
-    const categories = ["primary", "secondary", "lsi", "other"];
-    const distribution = state.anchorDistribution;
-
-    const counts = { primary: 0, secondary: 0, lsi: 0, other: 0 };
-    incomingLinks.forEach((rec) => {
-      const cat = classifyAnchorForLink(rec, state.pages);
-      counts[cat]++;
+  const keywordSpan = container.querySelector(".clickable-keyword");
+  if (keywordSpan) {
+    keywordSpan.addEventListener("click", function () {
+      const keyword = this.getAttribute("data-keyword");
+      if (keyword) copyToClipboard(keyword);
     });
-
-    const total = incomingLinks.length;
-    const actualPct = {};
-    categories.forEach((c) => {
-      actualPct[c] = total ? (counts[c] / total) * 100 : 0;
-    });
-
-    const targetPct = {
-      primary: distribution.primary,
-      secondary: distribution.secondary,
-      lsi: distribution.lsi,
-      other:
-        100 -
-        (distribution.primary + distribution.secondary + distribution.lsi),
-    };
-    targetPct.other = Math.max(0, targetPct.other);
-
-    const weights = { primary: 1.4, secondary: 1.2, lsi: 1.0, other: 0.7 };
-    let totalWeight = 0;
-    let weightedDeviation = 0;
-    categories.forEach((c) => {
-      const deviation = Math.abs(actualPct[c] - targetPct[c]);
-      weightedDeviation += deviation * weights[c];
-      totalWeight += weights[c];
-    });
-
-    const avgDeviation = weightedDeviation / totalWeight;
-    const score = Math.max(0, Math.round(100 - avgDeviation));
-
-    let status;
-    if (score >= 90) status = "Excellent";
-    else if (score >= 75) status = "Healthy";
-    else if (score >= 55) status = "Needs Attention";
-    else status = "Critical";
-
-    return {
-      score,
-      status,
-      eligibleCount: total,
-      actualDistribution: actualPct,
-      targetDistribution: targetPct,
-    };
   }
+}
+
+function calculateAnchorDistributionHealth(pageId) {
+  const page = state.pages.find((p) => p.id === pageId);
+  if (!page) return null;
+
+  const incomingLinks = getAllEligibleIncomingLinks(pageId);
+  const total = incomingLinks.length;
+
+  const counts = { primary: 0, secondary: 0, lsi: 0, other: 0 };
+  incomingLinks.forEach((rec) => {
+    const t = getAnchorCategory(rec, state.pages);
+    if (t in counts) counts[t]++;
+    else counts.other++;
+  });
+
+  const pct = {
+    primary: total ? (counts.primary / total) * 100 : 0,
+    secondary: total ? (counts.secondary / total) * 100 : 0,
+    lsi: total ? (counts.lsi / total) * 100 : 0,
+    other: total ? (counts.other / total) * 100 : 0,
+  };
+
+  const target = {
+    primary: Number(state.anchorDistribution?.primary ?? 35),
+    secondary: Number(state.anchorDistribution?.secondary ?? 35),
+    lsi: Number(state.anchorDistribution?.lsi ?? 30),
+  };
+
+  const scoreFor = (actual, ideal) => {
+    const diff = Math.abs(actual - ideal);
+    return Math.max(0, 100 - diff * 2); // same scale style, stable numeric
+  };
+
+  const scores = {
+    primary: scoreFor(pct.primary, target.primary),
+    secondary: scoreFor(pct.secondary, target.secondary),
+    lsi: scoreFor(pct.lsi, target.lsi),
+  };
+
+  const overall = Math.round((scores.primary + scores.secondary + scores.lsi) / 3);
+
+  return {
+    total,
+    counts,
+    actualPct: pct,
+    targetPct: {
+      ...target,
+      other: Math.max(0, 100 - (target.primary + target.secondary + target.lsi)),
+    },
+    scores,
+    overall,
+  };
+}
+
 
   function calculateInternalLinkEquity(pageId) {
     const pages = state.pages.filter(
@@ -1696,7 +1787,7 @@
       if (!source.canLinkOut || !target.canReceiveLinks) return;
 
       const key = `${rec.sourceId}->${rec.targetId}`;
-      const cat = classifyAnchorForLink(rec, state.pages);
+      const cat = getAnchorCategory(rec, state.pages);
       linkQuality[key] = anchorQualityMap[cat] || 0.6;
 
       if (!inLinks[rec.targetId]) inLinks[rec.targetId] = [];
@@ -1785,37 +1876,48 @@
   }
 
   function updateEditPageGauges(pageId) {
-    const anchorScoreEl = document.getElementById("editAnchorScore");
-    const anchorStatusEl = document.getElementById("editAnchorStatus");
-    const anchorDetailEl = document.getElementById("editAnchorDetail");
-    const equityScoreEl = document.getElementById("editEquityScore");
-    const equityStatusEl = document.getElementById("editEquityStatus");
-    const equityDetailEl = document.getElementById("editEquityDetail");
+  const anchorScoreEl = document.getElementById("editAnchorScore");
+  const anchorStatusEl = document.getElementById("editAnchorStatus");
+  const anchorDetailEl = document.getElementById("editAnchorDetail");
+  const equityScoreEl = document.getElementById("editEquityScore");
+  const equityStatusEl = document.getElementById("editEquityStatus");
+  const equityDetailEl = document.getElementById("editEquityDetail");
 
-    const anchorResult = calculateAnchorDistributionHealth(pageId);
-    if (!anchorResult || anchorResult.score === null) {
-      anchorScoreEl.textContent = "--";
-      anchorStatusEl.textContent =
-        anchorResult?.status === "not_applicable" ? "Disabled" : "No data";
-      anchorDetailEl.textContent = "";
-    } else {
-      anchorScoreEl.textContent = anchorResult.score + "%";
-      anchorStatusEl.textContent = anchorResult.status;
-      anchorDetailEl.textContent = `${anchorResult.eligibleCount} eligible links`;
-    }
-
-    const equityResult = calculateInternalLinkEquity(pageId);
-    if (!equityResult || equityResult.score === null) {
-      equityScoreEl.textContent = "--";
-      equityStatusEl.textContent =
-        equityResult?.status === "not_applicable" ? "Disabled" : "No data";
-      equityDetailEl.textContent = "";
-    } else {
-      equityScoreEl.textContent = equityResult.score + "%";
-      equityStatusEl.textContent = equityResult.status;
-      equityDetailEl.textContent = `Importance: ${["", "Very Low", "Low", "Medium", "High", "Very High"][equityResult.importance]}`;
-    }
+  // Anchor Health
+  const anchorResult = calculateAnchorDistributionHealth(pageId);
+  if (!anchorResult || anchorResult.total === 0) {
+    anchorScoreEl.textContent = "--";
+    anchorStatusEl.textContent = anchorResult ? "No eligible links" : "No data";
+    anchorDetailEl.textContent = "";
+  } else {
+    anchorScoreEl.textContent = anchorResult.overall + "%";
+    if (anchorResult.overall >= 90) anchorStatusEl.textContent = "Excellent";
+    else if (anchorResult.overall >= 75) anchorStatusEl.textContent = "Healthy";
+    else if (anchorResult.overall >= 55) anchorStatusEl.textContent = "Needs Attention";
+    else anchorStatusEl.textContent = "Critical";
+    anchorDetailEl.textContent = `${anchorResult.total} eligible links`;
   }
+
+  const equityResult = calculateInternalLinkEquity(pageId);
+  if (!equityResult || equityResult.score === null) {
+    equityScoreEl.textContent = "--";
+    equityStatusEl.textContent =
+      equityResult?.status === "not_applicable" ? "Disabled" : "No data";
+    equityDetailEl.textContent = "";
+  } else {
+    equityScoreEl.textContent = equityResult.score + "%";
+    equityStatusEl.textContent = equityResult.status;
+    equityDetailEl.textContent = `Importance: ${["", "Very Low", "Low", "Medium", "High", "Very High"][equityResult.importance]}`;
+  }
+}
+
+function refreshEditPageUI(pageId) {
+  renderEditRecommendations(pageId);
+  renderIncomingLinks(pageId);
+  renderAnchorRecommendation(pageId);
+  updateEditPageGauges(pageId);
+  renderOverviewGauges();
+}
 
   /* :::::::::::::::::::::::::: EDIT PAGE MODAL :::::::::::::::::::::::::: */
   function openEditPageModal(pageId) {
@@ -1963,22 +2065,29 @@
       });
     });
 
-    container.querySelectorAll(".link-type-bar[data-rec-id]").forEach((bar) => {
-      const recId = bar.getAttribute("data-rec-id");
-      const hidden = bar.querySelector(".link-type-value");
-      const buttons = bar.querySelectorAll(".link-type-option");
-      buttons.forEach((btn) => {
-        btn.addEventListener("click", () => {
-          buttons.forEach((b) => b.classList.remove("is-active"));
-          btn.classList.add("is-active");
-          hidden.value = btn.getAttribute("data-value");
-          if (recId) {
-            const rec = state.recommendations.find((r) => r.id === recId);
-            if (rec) rec.linkType = hidden.value;
-          }
-        });
-      });
+container.querySelectorAll(".link-type-bar[data-rec-id]").forEach((bar) => {
+  const recId = bar.getAttribute("data-rec-id");
+  const hidden = bar.querySelector(".link-type-value");
+  const buttons = bar.querySelectorAll(".link-type-option");
+
+  buttons.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      buttons.forEach((b) => b.classList.remove("is-active"));
+      btn.classList.add("is-active");
+      hidden.value = btn.getAttribute("data-value");
+
+      if (recId) {
+        const rec = state.recommendations.find((r) => r.id === recId);
+        if (rec) {
+          rec.linkType = hidden.value;
+        }
+      }
+
+      saveState();
+      refreshEditPageUI(pageId);
     });
+  });
+});
 
     const newBar = document.getElementById("new-link-type-bar");
     if (newBar) {
@@ -1993,63 +2102,66 @@
       });
     }
 
-    container.querySelectorAll(".edit-rec-btn").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const recId = btn.getAttribute("data-rec-id");
-        const rec = state.recommendations.find((r) => r.id === recId);
-        if (!rec) return;
+container.querySelectorAll(".edit-rec-btn").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const recId = btn.getAttribute("data-rec-id");
+    const rec = state.recommendations.find((r) => r.id === recId);
+    if (!rec) return;
 
-        if (rec.editMode) {
-          const input = container.querySelector(
-            `.edit-target-url-input[data-rec-id="${recId}"]`,
-          );
-          if (input) {
-            const rawUrl = input.value.trim();
-            const url = normalizeUrl(rawUrl);
-            if (!url) {
-              showToast("Please enter a valid URL.");
-              return;
-            }
-            let targetPage = state.pages.find(
-              (p) => p.url.toLowerCase() === url.toLowerCase(),
-            );
-            if (!targetPage) {
-              if (rec.linkType === "intent") {
-                targetPage = {
-                  id: createId(),
-                  title:
-                    url.replace(/^https?:\/\//, "").replace(/\/$/, "") ||
-                    "Untitled",
-                  url: url,
-                  primaryKeyword: "",
-                  secondaryKeywords: [],
-                  lsiKeywords: [],
-                  wordCount: 0,
-                  canLinkOut: true,
-                  canReceiveLinks: true,
-                  priority: 3,
-                  tags: [],
-                  pageType: "planned",
-                };
-                state.pages.push(targetPage);
-              } else {
-                showToast(
-                  "Page not found. Observed Link requires an existing Actual Page.",
-                );
-                return;
-              }
-            }
-            rec.targetId = targetPage.id;
-          }
-          rec.editMode = false;
-          saveState();
-          renderEditRecommendations(pageId);
-        } else {
-          rec.editMode = true;
-          renderEditRecommendations(pageId);
+    if (rec.editMode) {
+      const input = container.querySelector(
+        `.edit-target-url-input[data-rec-id="${recId}"]`,
+      );
+      if (input) {
+        const rawUrl = input.value.trim();
+        const url = normalizeUrl(rawUrl);
+        if (!url) {
+          showToast("Please enter a valid URL.");
+          return;
         }
-      });
-    });
+
+        let targetPage = state.pages.find(
+          (p) => p.url.toLowerCase() === url.toLowerCase(),
+        );
+        if (!targetPage) {
+          if (rec.linkType === "intent") {
+            targetPage = {
+              id: createId(),
+              title:
+                url.replace(/^https?:\/\//, "").replace(/\/$/, "") ||
+                "Untitled",
+              url: url,
+              primaryKeyword: "",
+              secondaryKeywords: [],
+              lsiKeywords: [],
+              wordCount: 0,
+              canLinkOut: true,
+              canReceiveLinks: true,
+              priority: 3,
+              tags: [],
+              pageType: "planned",
+            };
+            state.pages.push(targetPage);
+          } else {
+            showToast(
+              "Page not found. Observed Link requires an existing Actual Page.",
+            );
+            return;
+          }
+        }
+        rec.targetId = targetPage.id;
+      }
+
+      rec.editMode = false;
+
+      saveState();
+      refreshEditPageUI(pageId);
+    } else {
+      rec.editMode = true;
+      renderEditRecommendations(pageId);
+    }
+  });
+});
 
     container.querySelectorAll(".edit-target-url-input").forEach((input) => {
       attachSimpleAutocomplete(input, pageUrlSuggestions);
@@ -2172,14 +2284,10 @@
             saveState();
           }
 
-          if (targetPage) {
-            addManualRecommendation(
-              pageId,
-              targetPage.id,
-              anchorText,
-              linkType,
-            );
-            renderEditRecommendations(pageId);
+                    if (targetPage) {
+            addManualRecommendation(pageId, targetPage.id, anchorText, linkType);
+            saveState();
+            refreshEditPageUI(pageId);
           }
         }
       });
@@ -2190,79 +2298,80 @@
     }
   }
 
-  function renderIncomingLinks(pageId) {
-    const tbody = document.getElementById("incoming-links-body");
-    const emptyState = document.getElementById("incoming-links-empty");
-    const tableWrapper = document.getElementById(
-      "incoming-links-table-wrapper",
-    );
-    if (!tbody || !emptyState || !tableWrapper) return;
+function renderIncomingLinks(pageId) {
+  const tbody = document.getElementById("incoming-links-body");
+  const emptyState = document.getElementById("incoming-links-empty");
+  const tableWrapper = document.getElementById("incoming-links-table-wrapper");
+  if (!tbody || !emptyState || !tableWrapper) return;
 
-    const incomingRecs = state.recommendations.filter(
-      (rec) => rec.targetId === pageId,
-    );
-    let html = "";
+const incomingRecs = state.recommendations.filter(rec => rec.targetId === pageId);
+  let html = "";
 
-    incomingRecs.forEach((rec) => {
-      const sourcePage = state.pages.find((p) => p.id === rec.sourceId);
-      if (!sourcePage) {
-        console.warn(
-          `Source page not found for recommendation ${rec.id}, sourceId: ${rec.sourceId}`,
-        );
-        html += `<tr>
-                            <td><span class="page-link" style="color: var(--danger)">Unknown Page (ID: ${rec.sourceId})</span></td>
-                            <td>—</td>
-                        </tr>`;
-      } else {
-        const url = sourcePage.url;
-        const tags =
-          sourcePage.tags && sourcePage.tags.length
-            ? sourcePage.tags.join(", ")
-            : "—";
-        html += `<tr>
-                            <td><a href="${url}" class="page-link" target="_blank">${displayUrl(url)}</a></td>
-                            <td>${tags}</td>
-                        </tr>`;
-      }
-    });
-
-    tbody.innerHTML = html;
-
-    if (incomingRecs.length === 0) {
-      tableWrapper.style.display = "none";
-      emptyState.style.display = "block";
+  incomingRecs.forEach((rec) => {
+    const sourcePage = state.pages.find((p) => p.id === rec.sourceId);
+    if (!sourcePage) {
+      console.warn(
+        `Source page not found for recommendation ${rec.id}, sourceId: ${rec.sourceId}`
+      );
+      html += `<tr>
+        <td><span class="page-link" style="color: var(--danger)">Unknown Page (ID: ${rec.sourceId})</span></td>
+        <td>—</td>
+      </tr>`;
     } else {
-      tableWrapper.style.display = "";
-      emptyState.style.display = "none";
+      const url = sourcePage.url;
+      const anchorText = rec.anchorText || "—";
+      html += `<tr>
+        <td><a href="${url}" class="page-link" target="_blank">${displayUrl(url)}</a></td>
+        <td>${anchorText}</td>
+      </tr>`;
+    }
+  });
+
+  tbody.innerHTML = html;
+
+  if (incomingRecs.length === 0) {
+    tableWrapper.style.display = "none";
+    emptyState.style.display = "block";
+  } else {
+    tableWrapper.style.display = "";
+    emptyState.style.display = "none";
+  }
+}
+
+function addManualRecommendation(sourceId, targetId, anchorText, linkType = "intent") {
+  const targetPage = state.pages.find(p => p.id === targetId);
+  let anchorType = "other";
+
+  if (targetPage && anchorText) {
+    const anchorCanon = canonicalizeForMatch(anchorText);
+    if (targetPage.primaryKeyword && anchorCanon === canonicalizeForMatch(targetPage.primaryKeyword)) {
+      anchorType = "primary";
+    } else if (Array.isArray(targetPage.secondaryKeywords) && targetPage.secondaryKeywords.some(k => anchorCanon === canonicalizeForMatch(k))) {
+      anchorType = "secondary";
+    } else if (Array.isArray(targetPage.lsiKeywords) && targetPage.lsiKeywords.some(k => anchorCanon === canonicalizeForMatch(k))) {
+      anchorType = "lsi";
     }
   }
 
-  function addManualRecommendation(
+  state.recommendations.push({
+    id: createId(),
     sourceId,
     targetId,
-    anchorText,
-    linkType = "intent",
-  ) {
-    state.recommendations.push({
-      id: createId(),
-      sourceId: sourceId,
-      targetId: targetId,
-      score: 0,
-      completed: false,
-      anchorText: anchorText || null,
-      anchorType: anchorText ? "manual" : null,
-      linkType: linkType,
-      isAuto: false,
-    });
-  }
+    score: 0,
+    completed: false,
+    anchorText: anchorText || null,
+    anchorType: anchorType,
+    linkType,
+    isAuto: false,
+  });
+}
 
   function removeRecommendation(recId, pageId) {
     state.recommendations = state.recommendations.filter(
       (rec) => rec.id !== recId,
     );
-    renderEditRecommendations(pageId);
-    renderIncomingLinks(pageId);
-    renderAnchorRecommendation(pageId);
+    saveState();
+    refreshEditPageUI(pageId);
   }
 
   async function handleEditPageSave() {
@@ -2552,24 +2661,32 @@
     });
   }
 
-  function handleSaveDistribution() {
-    if (!requireLogin("save settings")) return;
-    const primary = parseInt(elements.settingsPrimaryPercent.value, 10) || 0;
-    const secondary =
-      parseInt(elements.settingsSecondaryPercent.value, 10) || 0;
-    const lsi = parseInt(elements.settingsLsiPercent.value, 10) || 0;
-    const total = primary + secondary + lsi;
-    if (primary < 0 || secondary < 0 || lsi < 0 || total !== 100) {
-      showToast("Percentages must sum to 100.");
-      return;
-    }
-    state.anchorDistribution = { primary, secondary, lsi };
-    saveState();
-    syncDistributionInputs();
-    renderOverviewGauges();
-    state.recommendations = buildRecommendations();
-    showToast("Settings saved!");
+function handleSaveDistribution() {
+  const p = Number(elements.settingsPrimaryPercent?.value ?? 0);
+  const s = Number(elements.settingsSecondaryPercent?.value ?? 0);
+  const l = Number(elements.settingsLsiPercent?.value ?? 0);
+
+  if (![p, s, l].every(Number.isFinite)) {
+    showToast("Please enter valid numeric percentages.", "error");
+    return;
   }
+
+  const sum = p + s + l;
+  if (sum !== 100) {
+    showToast("Primary + Secondary + LSI must equal 100.", "error");
+    return;
+  }
+
+  state.anchorDistribution = {
+    primary: p,
+    secondary: s,
+    lsi: l,
+  };
+
+  saveState();
+  renderOverviewGauges();
+  showToast("Anchor distribution saved.", "success");
+}
 
   /* :::::::::::::::::::::::::: MULTI-STEP FORM :::::::::::::::::::::::::: */
   function goToStep(step) {
@@ -3009,32 +3126,35 @@
       .filter(Boolean);
   }
 
-  function classifyAnchorForLink(rec, pages) {
-    const targetPage = pages.find((p) => p.id === rec.targetId);
-    if (!targetPage) return "other";
+function classifyAnchorForLink(rec, pages) {
+  const targetId = rec?.targetId ?? rec?.pageId ?? rec?.target_id ?? null;
+  const anchorRaw = rec?.anchorText ?? rec?.anchor ?? rec?.anchor_text ?? "";
 
-    const normalizedAnchor = normalizeTerm(rec.anchorText || "");
-    if (!normalizedAnchor) return "other";
+  const targetPage = (pages || []).find((p) => p.id === targetId);
+  if (!targetPage) return "other";
 
-    const hasPrimary =
-      targetPage.primaryKeyword &&
-      normalizedAnchor.includes(normalizeTerm(targetPage.primaryKeyword));
-    const hasSecondary =
-      targetPage.secondaryKeywords &&
-      targetPage.secondaryKeywords.some((k) =>
-        normalizedAnchor.includes(normalizeTerm(k)),
-      );
-    const hasLsi =
-      targetPage.lsiKeywords &&
-      targetPage.lsiKeywords.some((k) =>
-        normalizedAnchor.includes(normalizeTerm(k)),
-      );
+  const anchorCanon = canonicalizeForMatch(anchorRaw);
+  if (!anchorCanon) return "other";
 
-    if (hasPrimary) return "primary";
-    if (hasSecondary) return "secondary";
-    if (hasLsi) return "lsi";
-    return "other";
-  }
+  const primaryCanon = canonicalizeForMatch(targetPage.primaryKeyword || "");
+
+  const toArr = (v) =>
+    Array.isArray(v) ? v : typeof v === "string" ? v.split(/[,\n;|،؛]+/g).map(s => s.trim()).filter(Boolean) : [];
+
+  const secondary = toArr(targetPage.secondaryKeywords);
+  const lsi = toArr(targetPage.lsiKeywords);
+
+  if (primaryCanon && anchorCanon === primaryCanon) return "primary";
+  if (secondary.some(k => canonicalizeForMatch(k) === anchorCanon)) return "secondary";
+  if (lsi.some(k => canonicalizeForMatch(k) === anchorCanon)) return "lsi";
+
+  return "other";
+}
+
+function getAnchorCategory(rec, pages) {
+  // Ignore stored anchorType to avoid stale wrong data
+  return classifyAnchorForLink(rec, pages);
+}
 
   function getActualPages() {
     return state.pages.filter((p) => (p.pageType || "actual") === "actual");
@@ -3228,7 +3348,7 @@
         secondaryCount = 0,
         lsiCount = 0;
       links.forEach((link) => {
-        const type = classifyAnchorForLink(link, pages);
+        const type = getAnchorCategory(link, pages);
         if (type === "primary") primaryCount++;
         else if (type === "secondary") secondaryCount++;
         else if (type === "lsi") lsiCount++;
@@ -3331,6 +3451,8 @@
   }
 
   function renderOverviewGauges() {
+    resetGaugeSweep()
+
     const healthCard = document.querySelector(
       '.gauge-card[data-gauge-type="health"]',
     );
@@ -3411,30 +3533,29 @@
     }
   }
 
-  function updateScoreGauge(card, percent) {
-    const svg = card.querySelector("svg.gauge");
-    const fillPath = svg.querySelector(".gauge-fill");
-    const needle = svg.querySelector(".gauge-needle");
-    const circumference = 157;
-    const offset = circumference - (circumference * percent) / 100;
-    fillPath.setAttribute("stroke-dashoffset", offset);
+function updateScoreGauge(card, percent) {
+  const svg = card.querySelector("svg.gauge");
+  const fillPath = svg.querySelector(".gauge-fill");
+  const needle = svg.querySelector(".gauge-needle");
+  const circumference = 157;
+  const offset = circumference - (circumference * percent) / 100;
+  fillPath.setAttribute("stroke-dashoffset", offset);
 
-    const rotation = -90 + (percent / 100) * 180;
-    needle.style.transform = `rotate(${rotation}deg)`;
-    needle.style.transformOrigin = "70px 70px";
-  }
+  const rotation = -90 + (percent / 100) * 180;
+  sweepGaugeNeedle(needle, rotation);
+  startGaugeAnimation();
+}
 
-  function updateDensityGauge(card, densityValue) {
-    const svg = card.querySelector("svg.gauge");
-    const needle = svg.querySelector(".gauge-needle");
+function updateDensityGauge(card, densityValue) {
+  const svg = card.querySelector("svg.gauge");
+  const needle = svg.querySelector(".gauge-needle");
 
-    let rotation = -90 + (densityValue / 2) * 180;
+  let rotation = -90 + (densityValue / 2) * 180;
+  rotation = Math.min(90, Math.max(-90, rotation));
 
-    rotation = Math.min(90, Math.max(-90, rotation));
-
-    needle.style.transform = `rotate(${rotation}deg)`;
-    needle.style.transformOrigin = "70px 70px";
-  }
+  sweepGaugeNeedle(needle, rotation);
+  startGaugeAnimation();
+}
 
   function setGaugeLabels(card, mainText, statusText) {
     const descEl = card.querySelector(".card-desc");
@@ -3462,21 +3583,19 @@
     }
   }
 
-  function getHealthStatus(score) {
-    if (score >= 90) return "Excellent";
-    if (score >= 75) return "Healthy";
-    if (score >= 60) return "Needs Attention";
-    if (score >= 40) return "Poor";
-    return "Critical";
-  }
+function getHealthStatus(score) {
+  if (score >= 67) return "Excellent";
+  if (score >= 34) return "Needs Attention";
+  return "Critical";
+}
 
-  function getDensityStatus(density) {
-    if (density < 0.5) return "Very Sparse";
-    if (density < 0.8) return "Sparse";
-    if (density <= 1.2) return "Optimal";
-    if (density <= 1.5) return "Dense";
-    return "Overlinked";
-  }
+function getDensityStatus(density) {
+  if (density < 0.5) return "Very Sparse";
+  if (density < 0.75) return "Sparse";
+  if (density <= 1.25) return "Optimal";
+  if (density <= 1.5) return "Dense";
+  return "Overlinked";
+}
 
   function getStrategyStatus(score) {
     if (score >= 90) return "Excellent";
@@ -4212,7 +4331,7 @@
 
     observedLinks.forEach((rec) => {
       const kw = rec.anchorText || "";
-      const type = classifyAnchorForLink(rec, state.pages);
+      const type = getAnchorCategory(rec, state.pages);
 
       if (type === "primary") {
         primaryCount++;
