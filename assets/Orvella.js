@@ -1550,6 +1550,30 @@ async function refreshData() {
     });
   }
 
+function pickLeastUsedKeyword(keywords, incomingLinks) {
+  const arr = (keywords || [])
+    .map((k) => String(k).trim())
+    .filter(Boolean);
+  if (arr.length === 0) return "";
+  if (arr.length === 1) return arr[0];
+
+  const canonArr = arr.map((k) => canonicalizeForMatch(k));
+  const counts = new Array(arr.length).fill(0);
+
+  (incomingLinks || []).forEach((rec) => {
+    const anchorCanon = canonicalizeForMatch(rec?.anchorText || "");
+    if (!anchorCanon) return;
+    const idx = canonArr.indexOf(anchorCanon);
+    if (idx !== -1) counts[idx]++;
+  });
+
+  let minIdx = 0;
+  for (let i = 1; i < counts.length; i++) {
+    if (counts[i] < counts[minIdx]) minIdx = i;
+  }
+  return arr[minIdx];
+}
+
 function getAnchorRecommendationForPage(pageId) {
   const page = state.pages.find((p) => p.id === pageId);
   if (!page) return null;
@@ -1563,7 +1587,10 @@ function getAnchorRecommendationForPage(pageId) {
     };
   }
 
-const incomingLinks = state.recommendations.filter(rec => rec.targetId === pageId);  const total = incomingLinks.length;
+  const incomingLinks = state.recommendations.filter(
+    (rec) => rec.targetId === pageId
+  );
+  const total = incomingLinks.length;
 
   const target = {
     primary: Number(state.anchorDistribution?.primary ?? 35),
@@ -1573,7 +1600,8 @@ const incomingLinks = state.recommendations.filter(rec => rec.targetId === pageI
 
   const toArr = (v) => {
     if (Array.isArray(v)) return v;
-    if (typeof v === "string") return v.split(/[,\n;|،؛]+/g).map(s => s.trim()).filter(Boolean);
+    if (typeof v === "string")
+      return v.split(/[,\n;|،؛]+/g).map((s) => s.trim()).filter(Boolean);
     return [];
   };
 
@@ -1583,7 +1611,6 @@ const incomingLinks = state.recommendations.filter(rec => rec.targetId === pageI
 
   const counts = { primary: 0, secondary: 0, lsi: 0, other: 0 };
 
-  // استفاده از تابع استاندارد و تست‌شده
   incomingLinks.forEach((rec) => {
     const category = classifyAnchorForLink(rec, state.pages);
     if (category in counts) {
@@ -1606,9 +1633,9 @@ const incomingLinks = state.recommendations.filter(rec => rec.targetId === pageI
       suggestedKeyword: hasPrimary
         ? page.primaryKeyword
         : hasSecondary
-        ? toArr(page.secondaryKeywords)[0] || ""
+        ? pickLeastUsedKeyword(toArr(page.secondaryKeywords), incomingLinks)
         : hasLsi
-        ? toArr(page.lsiKeywords)[0] || ""
+        ? pickLeastUsedKeyword(toArr(page.lsiKeywords), incomingLinks)
         : "",
       currentPct,
       targetPct: target,
@@ -1617,36 +1644,53 @@ const incomingLinks = state.recommendations.filter(rec => rec.targetId === pageI
     };
   }
 
-  const deficits = {
-    primary: hasPrimary ? target.primary - (currentPct.primary ?? 0) : -Infinity,
-    secondary: hasSecondary ? target.secondary - (currentPct.secondary ?? 0) : -Infinity,
-    lsi: hasLsi ? target.lsi - (currentPct.lsi ?? 0) : -Infinity,
-  };
+  const pPct = currentPct.primary ?? 0;
+  const sPct = currentPct.secondary ?? 0;
+  const lPct = currentPct.lsi ?? 0;
 
-  let maxDeficitType = null;
-  let maxDeficit = -Infinity;
-  for (const type of ["primary", "secondary", "lsi"]) {
-    if (deficits[type] > maxDeficit) {
-      maxDeficit = deficits[type];
-      maxDeficitType = type;
-    }
+  let chosenType = null;
+
+  if (hasPrimary && pPct < target.primary) {
+    chosenType = "primary";
+  } else if (hasSecondary && sPct < target.secondary) {
+    chosenType = "secondary";
+  } else if (hasLsi && lPct < target.lsi) {
+    chosenType = "lsi";
+  } else {
+    if (hasPrimary) chosenType = "primary";
+    else if (hasSecondary) chosenType = "secondary";
+    else if (hasLsi) chosenType = "lsi";
   }
 
   let suggestedKeyword = "";
-  if (maxDeficitType === "primary") suggestedKeyword = page.primaryKeyword || "";
-  else if (maxDeficitType === "secondary") suggestedKeyword = toArr(page.secondaryKeywords)[0] || "";
-  else if (maxDeficitType === "lsi") suggestedKeyword = toArr(page.lsiKeywords)[0] || "";
+  if (chosenType === "primary") {
+    suggestedKeyword = page.primaryKeyword || "";
+  } else if (chosenType === "secondary") {
+    suggestedKeyword = pickLeastUsedKeyword(
+      toArr(page.secondaryKeywords),
+      incomingLinks
+    );
+  } else if (chosenType === "lsi") {
+    suggestedKeyword = pickLeastUsedKeyword(
+      toArr(page.lsiKeywords),
+      incomingLinks
+    );
+  }
+
+  const deficits = {
+    primary: hasPrimary ? target.primary - pPct : null,
+    secondary: hasSecondary ? target.secondary - sPct : null,
+    lsi: hasLsi ? target.lsi - lPct : null,
+  };
 
   return {
-    type: maxDeficitType,
+    type: chosenType,
     suggestedKeyword,
     currentPct,
     targetPct: target,
     deficits,
     counts,
-    message: maxDeficitType
-      ? `Use ${maxDeficitType} anchor text: "${suggestedKeyword}" (based on observed + planned links)`
-      : "No anchor deficit detected.",
+    message: `Use ${chosenType} anchor text: "${suggestedKeyword}" (based on observed + planned links)`,
   };
 }
 
@@ -1987,196 +2031,267 @@ function refreshEditPageUI(pageId) {
     });
   }
 
-  /* :::::::::::::::::::::::::: EDIT PAGE – OUTBOUND SUGGESTIONS :::::::::::::::::::::::::: */
-  function renderEditRecommendations(pageId) {
+function findPageByKeyword(keyword) {
+  const canon = canonicalizeForMatch(keyword);
+  if (!canon) return null;
+
+  const toArr = (v) => {
+    if (Array.isArray(v)) return v;
+    if (typeof v === "string")
+      return v.split(/[,\n;|،؛]+/g).map((s) => s.trim()).filter(Boolean);
+    return [];
+  };
+
+  const matches = [];
+  for (const page of state.pages) {
+    if (canonicalizeForMatch(page.primaryKeyword || "") === canon) {
+      matches.push({ page, rank: 1 });
+      continue;
+    }
+    if (toArr(page.secondaryKeywords).some((k) => canonicalizeForMatch(k) === canon)) {
+      matches.push({ page, rank: 2 });
+      continue;
+    }
+    if (toArr(page.lsiKeywords).some((k) => canonicalizeForMatch(k) === canon)) {
+      matches.push({ page, rank: 3 });
+    }
+  }
+
+  if (matches.length === 0) return null;
+
+  matches.sort((a, b) => {
+    if (a.rank !== b.rank) return a.rank - b.rank;
+    return (b.page.priority || 3) - (a.page.priority || 3);
+  });
+
+  return matches[0].page;
+}
+
+function fallbackCopy(text) {
+  const ta = document.createElement("textarea");
+  ta.value = text;
+  ta.style.position = "fixed";
+  ta.style.top = "-9999px";
+  ta.style.left = "-9999px";
+  document.body.appendChild(ta);
+  ta.focus();
+  ta.select();
+  try {
+    document.execCommand("copy");
+    showToast("Outbound Link Suggestions Copied");
+  } catch (e) {
+    showToast("Failed to copy.");
+  }
+  document.body.removeChild(ta);
+}
+
+function ensureCopyOutboundButton() {
+  const title = document.querySelector(".suggestions-box .suggestions-title");
+  if (!title) return;
+  if (title.parentElement.classList.contains("suggestions-title-row")) return;
+
+  const wrapper = document.createElement("div");
+  wrapper.className = "suggestions-title-row";
+  title.parentElement.insertBefore(wrapper, title);
+  wrapper.appendChild(title);
+
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "copy-outbound-btn";
+  btn.title = "Copy all outbound links";
+  btn.innerHTML = `
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+         stroke-width="1.5" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round"
+        d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184" />
+    </svg>
+  `;
+  wrapper.appendChild(btn);
+
+  btn.addEventListener("click", () => {
     const container = document.getElementById("edit-recommendations-list");
     if (!container) return;
 
-    const recs = state.recommendations.filter((rec) => rec.sourceId === pageId);
-    let html = "";
+    const items = container.querySelectorAll(".suggestion-item[data-rec-id]");
+    const lines = [];
 
-    const pageUrlSuggestions = state.pages.map((p) => p.url);
-    const anchorSuggestions = [
-      ...new Set(
-        state.recommendations.map((rec) => rec.anchorText).filter(Boolean),
-      ),
-    ];
+    items.forEach((item) => {
+      const recId = item.getAttribute("data-rec-id");
+      const rec = state.recommendations.find((r) => r.id === recId);
+      if (!rec) return;
 
-    recs.forEach((rec) => {
       const target = state.pages.find((p) => p.id === rec.targetId);
-      const targetUrl = target ? target.url : "Unknown";
-      const linkType = rec.linkType || "intent";
-      const isEditMode = rec.editMode === true;
+      if (!target) return;
 
-      html += `
-                <div class="suggestion-item" data-rec-id="${rec.id}">
-                    <div class="suggestion-row-full">
-                        ${
-                          isEditMode
-                            ? `<input type="text" class="edit-target-url-input" value="${targetUrl}" placeholder="Page URL" data-rec-id="${rec.id}" />`
-                            : `<a href="${targetUrl}" class="page-link" target="_blank">${displayUrl(targetUrl)}</a>`
-                        }
-                        ${!isEditMode ? `<button class="remove-rec-btn" data-rec-id="${rec.id}" title="Remove">✕</button>` : ""}
-                    </div>
-                    <div class="suggestion-row-split">
-                        <input type="text" class="anchor-input" value="${rec.anchorText || ""}" 
-                            placeholder="Anchor text" data-rec-id="${rec.id}" ${isEditMode ? "" : "disabled"}>
-                        <div class="link-type-bar" data-rec-id="${rec.id}">
-                            <button type="button" class="link-type-option ${linkType === "observed" ? "is-active" : ""}" data-value="observed">Observed Link</button>
-                            <button type="button" class="link-type-option ${linkType === "intent" ? "is-active" : ""}" data-value="intent">Link Intent</button>
-                            <input type="hidden" class="link-type-value" value="${linkType}">
-                        </div>
-                        <button class="edit-rec-btn" data-rec-id="${rec.id}" title="${isEditMode ? "Save" : "Edit"}">
-                            ${
-                              isEditMode
-                                ? `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>`
-                                : `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" /></svg>`
-                            }
-                        </button>
-                    </div>
-                </div>
-            `;
+      const anchor = rec.anchorText && rec.anchorText.trim()
+        ? rec.anchorText.trim()
+        : "(no anchor)";
+      lines.push(`${anchor}: ${target.url}`);
     });
+
+    if (lines.length === 0) {
+      showToast("No outbound links to copy.");
+      return;
+    }
+
+    const text = lines.join("\n");
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard
+        .writeText(text)
+        .then(() => showToast("Outbound Link Suggestions Copied"))
+        .catch(() => fallbackCopy(text));
+    } else {
+      fallbackCopy(text);
+    }
+  });
+}
+
+  /* :::::::::::::::::::::::::: EDIT PAGE – OUTBOUND SUGGESTIONS :::::::::::::::::::::::::: */
+function renderEditRecommendations(pageId) {
+  const container = document.getElementById("edit-recommendations-list");
+  if (!container) return;
+
+  const page = state.pages.find((p) => p.id === pageId);
+  if (!page) return;
+
+  const wordCount = page.wordCount || 0;
+  const maxOutbound = Math.floor(wordCount / 300);
+
+  const recs = state.recommendations.filter((rec) => rec.sourceId === pageId);
+  const currentCount = recs.length;
+
+  let html = "";
+
+  const pageUrlSuggestions = state.pages.map((p) => p.url);
+  const anchorSuggestions = [
+    ...new Set(
+      state.recommendations.map((rec) => rec.anchorText).filter(Boolean),
+    ),
+  ];
+
+  recs.forEach((rec, index) => {
+    const target = state.pages.find((p) => p.id === rec.targetId);
+    const targetUrl = target ? target.url : "Unknown";
+    const linkType = rec.linkType || "intent";
+    const isEditMode = rec.editMode === true;
+
+    const limitClass = index >= maxOutbound ? "over-limit" : "within-limit";
 
     html += `
-            <div class="suggestion-item" id="add-rec-row">
-                <div class="suggestion-row-full">
-                    <input type="text" id="new-rec-page" placeholder="Page URL (Enter to add)" autocomplete="off"
-                        class="suggestion-url-input">
-                </div>
-                <div class="suggestion-row-split">
-                    <input type="text" id="new-rec-anchor" placeholder="Anchor text (optional)" 
-                        class="anchor-input">
-                    <div class="link-type-bar" id="new-link-type-bar">
-                        <button type="button" class="link-type-option" data-value="observed">Observed Link</button>
-                        <button type="button" class="link-type-option is-active" data-value="intent">Link Intent</button>
-                        <input type="hidden" class="link-type-value" value="intent">
-                    </div>
-                </div>
-            </div>
-        `;
+      <div class="suggestion-item ${limitClass}" data-rec-id="${rec.id}">
+        <div class="suggestion-row-full">
+          ${
+            isEditMode
+              ? `<input type="text" class="edit-target-url-input" value="${targetUrl}" placeholder="Page URL" data-rec-id="${rec.id}" />`
+              : `<a href="${targetUrl}" class="page-link" target="_blank">${displayUrl(targetUrl)}</a>`
+          }
+          ${!isEditMode ? `<button class="remove-rec-btn" data-rec-id="${rec.id}" title="Remove">✕</button>` : ""}
+        </div>
+        <div class="suggestion-row-split">
+          <input type="text" class="anchor-input" value="${rec.anchorText || ""}" 
+              placeholder="Anchor text" data-rec-id="${rec.id}" ${isEditMode ? "" : "disabled"}>
+          <div class="link-type-bar" data-rec-id="${rec.id}">
+            <button type="button" class="link-type-option ${linkType === "observed" ? "is-active" : ""}" data-value="observed">Observed Link</button>
+            <button type="button" class="link-type-option ${linkType === "intent" ? "is-active" : ""}" data-value="intent">Link Intent</button>
+            <input type="hidden" class="link-type-value" value="${linkType}">
+          </div>
+          <button class="edit-rec-btn" data-rec-id="${rec.id}" title="${isEditMode ? "Save" : "Edit"}">
+            ${
+              isEditMode
+                ? `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>`
+                : `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" /></svg>`
+            }
+          </button>
+        </div>
+      </div>
+    `;
+  });
 
-    container.innerHTML = html;
+  const addRowLimitClass = currentCount >= maxOutbound ? "over-limit" : "within-limit";
 
-    container.querySelectorAll(".remove-rec-btn").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const recId = btn.getAttribute("data-rec-id");
-        if (recId) removeRecommendation(recId, pageId);
-      });
-    });
+  html += `
+    <div class="suggestion-item ${addRowLimitClass}" id="add-rec-row">
+      <div class="suggestion-row-full">
+        <input type="text" id="new-rec-page" placeholder="Page URL (Enter to add)" autocomplete="off"
+            class="suggestion-url-input">
+      </div>
+      <div class="suggestion-row-split">
+        <input type="text" id="new-rec-anchor" placeholder="Anchor text (optional)" 
+            class="anchor-input">
+        <div class="link-type-bar" id="new-link-type-bar">
+          <button type="button" class="link-type-option" data-value="observed">Observed Link</button>
+          <button type="button" class="link-type-option is-active" data-value="intent">Link Intent</button>
+          <input type="hidden" class="link-type-value" value="intent">
+        </div>
+      </div>
+    </div>
+  `;
 
-container.querySelectorAll(".link-type-bar[data-rec-id]").forEach((bar) => {
-  const recId = bar.getAttribute("data-rec-id");
-  const hidden = bar.querySelector(".link-type-value");
-  const buttons = bar.querySelectorAll(".link-type-option");
+  container.innerHTML = html;
 
-  buttons.forEach((btn) => {
+  container.querySelectorAll(".remove-rec-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
-      buttons.forEach((b) => b.classList.remove("is-active"));
-      btn.classList.add("is-active");
-      hidden.value = btn.getAttribute("data-value");
-
-      if (recId) {
-        const rec = state.recommendations.find((r) => r.id === recId);
-        if (rec) {
-          rec.linkType = hidden.value;
-        }
-      }
-
-      saveState();
-      refreshEditPageUI(pageId);
+      const recId = btn.getAttribute("data-rec-id");
+      if (recId) removeRecommendation(recId, pageId);
     });
   });
-});
 
-    const newBar = document.getElementById("new-link-type-bar");
-    if (newBar) {
-      const hidden = newBar.querySelector(".link-type-value");
-      const buttons = newBar.querySelectorAll(".link-type-option");
-      buttons.forEach((btn) => {
-        btn.addEventListener("click", () => {
-          buttons.forEach((b) => b.classList.remove("is-active"));
-          btn.classList.add("is-active");
-          hidden.value = btn.getAttribute("data-value");
-        });
-      });
-    }
+  container.querySelectorAll(".link-type-bar[data-rec-id]").forEach((bar) => {
+    const recId = bar.getAttribute("data-rec-id");
+    const hidden = bar.querySelector(".link-type-value");
+    const buttons = bar.querySelectorAll(".link-type-option");
 
-container.querySelectorAll(".edit-rec-btn").forEach((btn) => {
-  btn.addEventListener("click", () => {
-    const recId = btn.getAttribute("data-rec-id");
-    const rec = state.recommendations.find((r) => r.id === recId);
-    if (!rec) return;
+    buttons.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        buttons.forEach((b) => b.classList.remove("is-active"));
+        btn.classList.add("is-active");
+        hidden.value = btn.getAttribute("data-value");
 
-    if (rec.editMode) {
-      const input = container.querySelector(
-        `.edit-target-url-input[data-rec-id="${recId}"]`,
-      );
-      if (input) {
-        const rawUrl = input.value.trim();
-        const url = normalizeUrl(rawUrl);
-        if (!url) {
-          showToast("Please enter a valid URL.");
-          return;
-        }
-
-        let targetPage = state.pages.find(
-          (p) => p.url.toLowerCase() === url.toLowerCase(),
-        );
-        if (!targetPage) {
-          if (rec.linkType === "intent") {
-            targetPage = {
-              id: createId(),
-              title:
-                url.replace(/^https?:\/\//, "").replace(/\/$/, "") ||
-                "Untitled",
-              url: url,
-              primaryKeyword: "",
-              secondaryKeywords: [],
-              lsiKeywords: [],
-              wordCount: 0,
-              canLinkOut: true,
-              canReceiveLinks: true,
-              priority: 3,
-              tags: [],
-              pageType: "planned",
-            };
-            state.pages.push(targetPage);
-          } else {
-            showToast(
-              "Page not found. Observed Link requires an existing Actual Page.",
-            );
-            return;
+        if (recId) {
+          const rec = state.recommendations.find((r) => r.id === recId);
+          if (rec) {
+            rec.linkType = hidden.value;
           }
         }
-        rec.targetId = targetPage.id;
-      }
 
-      rec.editMode = false;
-
-      saveState();
-      refreshEditPageUI(pageId);
-    } else {
-      rec.editMode = true;
-      renderEditRecommendations(pageId);
-    }
+        saveState();
+        refreshEditPageUI(pageId);
+      });
+    });
   });
-});
 
-    container.querySelectorAll(".edit-target-url-input").forEach((input) => {
-      attachSimpleAutocomplete(input, pageUrlSuggestions);
-      input.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") {
-          e.preventDefault();
-          const recId = input.getAttribute("data-rec-id");
-          const rec = state.recommendations.find((r) => r.id === recId);
-          if (!rec) return;
+  const newBar = document.getElementById("new-link-type-bar");
+  if (newBar) {
+    const hidden = newBar.querySelector(".link-type-value");
+    const buttons = newBar.querySelectorAll(".link-type-option");
+    buttons.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        buttons.forEach((b) => b.classList.remove("is-active"));
+        btn.classList.add("is-active");
+        hidden.value = btn.getAttribute("data-value");
+      });
+    });
+  }
+
+  container.querySelectorAll(".edit-rec-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const recId = btn.getAttribute("data-rec-id");
+      const rec = state.recommendations.find((r) => r.id === recId);
+      if (!rec) return;
+
+      if (rec.editMode) {
+        const input = container.querySelector(
+          `.edit-target-url-input[data-rec-id="${recId}"]`,
+        );
+        if (input) {
           const rawUrl = input.value.trim();
           const url = normalizeUrl(rawUrl);
           if (!url) {
             showToast("Please enter a valid URL.");
             return;
           }
+
           let targetPage = state.pages.find(
             (p) => p.url.toLowerCase() === url.toLowerCase(),
           );
@@ -2207,63 +2322,38 @@ container.querySelectorAll(".edit-rec-btn").forEach((btn) => {
             }
           }
           rec.targetId = targetPage.id;
-          rec.editMode = false;
-          saveState();
-          renderEditRecommendations(pageId);
         }
-      });
-    });
 
-    container.querySelectorAll(".anchor-input").forEach((input) => {
-      input.addEventListener("input", () => {
+        rec.editMode = false;
+
+        saveState();
+        refreshEditPageUI(pageId);
+      } else {
+        rec.editMode = true;
+        renderEditRecommendations(pageId);
+      }
+    });
+  });
+
+  container.querySelectorAll(".edit-target-url-input").forEach((input) => {
+    attachSimpleAutocomplete(input, pageUrlSuggestions);
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
         const recId = input.getAttribute("data-rec-id");
-        if (recId) {
-          const rec = state.recommendations.find((r) => r.id === recId);
-          if (rec) rec.anchorText = input.value.trim();
+        const rec = state.recommendations.find((r) => r.id === recId);
+        if (!rec) return;
+        const rawUrl = input.value.trim();
+        const url = normalizeUrl(rawUrl);
+        if (!url) {
+          showToast("Please enter a valid URL.");
+          return;
         }
-      });
-    });
-
-    const pageInput = document.getElementById("new-rec-page");
-    const anchorInput = document.getElementById("new-rec-anchor");
-
-    if (pageInput) {
-      attachSimpleAutocomplete(pageInput, pageUrlSuggestions);
-
-      pageInput.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") {
-          const dropdown =
-            pageInput.parentElement.querySelector(".autocomplete-list");
-          if (dropdown && dropdown.classList.contains("active")) return;
-          e.preventDefault();
-          const rawUrl = pageInput.value.trim();
-          const url = normalizeUrl(rawUrl);
-          if (!url) return;
-          const anchorText = anchorInput ? anchorInput.value.trim() : "";
-          const linkType = newBar
-            ? newBar.querySelector(".link-type-value").value
-            : "intent";
-
-          let targetPage = state.pages.find(
-            (p) => p.url.toLowerCase() === url.toLowerCase(),
-          );
-
-          if (linkType === "observed") {
-            if (!targetPage) {
-              showToast(
-                "Page not found. Observed Link requires an existing Actual Page.",
-              );
-              return;
-            }
-            if ((targetPage.pageType || "actual") !== "actual") {
-              showToast(
-                "Cannot create Observed Link to a Planned Page. Convert it to Actual first.",
-              );
-              return;
-            }
-          }
-
-          if (!targetPage && linkType === "intent") {
+        let targetPage = state.pages.find(
+          (p) => p.url.toLowerCase() === url.toLowerCase(),
+        );
+        if (!targetPage) {
+          if (rec.linkType === "intent") {
             targetPage = {
               id: createId(),
               title:
@@ -2281,22 +2371,117 @@ container.querySelectorAll(".edit-rec-btn").forEach((btn) => {
               pageType: "planned",
             };
             state.pages.push(targetPage);
-            saveState();
-          }
-
-                    if (targetPage) {
-            addManualRecommendation(pageId, targetPage.id, anchorText, linkType);
-            saveState();
-            refreshEditPageUI(pageId);
+          } else {
+            showToast(
+              "Page not found. Observed Link requires an existing Actual Page.",
+            );
+            return;
           }
         }
-      });
-    }
+        rec.targetId = targetPage.id;
+        rec.editMode = false;
+        saveState();
+        renderEditRecommendations(pageId);
+      }
+    });
+  });
 
-    if (anchorInput) {
-      attachSimpleAutocomplete(anchorInput, anchorSuggestions);
-    }
+  container.querySelectorAll(".anchor-input").forEach((input) => {
+    input.addEventListener("input", () => {
+      const recId = input.getAttribute("data-rec-id");
+      if (recId) {
+        const rec = state.recommendations.find((r) => r.id === recId);
+        if (rec) rec.anchorText = input.value.trim();
+      }
+    });
+  });
+
+  const pageInput = document.getElementById("new-rec-page");
+  const anchorInput = document.getElementById("new-rec-anchor");
+
+  if (pageInput) {
+    attachSimpleAutocomplete(pageInput, pageUrlSuggestions);
+
+    pageInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        const dropdown =
+          pageInput.parentElement.querySelector(".autocomplete-list");
+        if (dropdown && dropdown.classList.contains("active")) return;
+        e.preventDefault();
+        const rawUrl = pageInput.value.trim();
+        const url = normalizeUrl(rawUrl);
+        if (!url) return;
+        const anchorText = anchorInput ? anchorInput.value.trim() : "";
+        const linkType = newBar
+          ? newBar.querySelector(".link-type-value").value
+          : "intent";
+
+        let targetPage = state.pages.find(
+          (p) => p.url.toLowerCase() === url.toLowerCase(),
+        );
+
+        if (linkType === "observed") {
+          if (!targetPage) {
+            showToast(
+              "Page not found. Observed Link requires an existing Actual Page.",
+            );
+            return;
+          }
+          if ((targetPage.pageType || "actual") !== "actual") {
+            showToast(
+              "Cannot create Observed Link to a Planned Page. Convert it to Actual first.",
+            );
+            return;
+          }
+        }
+
+        if (!targetPage && linkType === "intent") {
+          targetPage = {
+            id: createId(),
+            title:
+              url.replace(/^https?:\/\//, "").replace(/\/$/, "") ||
+              "Untitled",
+            url: url,
+            primaryKeyword: "",
+            secondaryKeywords: [],
+            lsiKeywords: [],
+            wordCount: 0,
+            canLinkOut: true,
+            canReceiveLinks: true,
+            priority: 3,
+            tags: [],
+            pageType: "planned",
+          };
+          state.pages.push(targetPage);
+          saveState();
+        }
+
+        if (targetPage) {
+          addManualRecommendation(pageId, targetPage.id, anchorText, linkType);
+          saveState();
+          refreshEditPageUI(pageId);
+        }
+      }
+    });
   }
+
+  if (anchorInput) {
+    attachSimpleAutocomplete(anchorInput, anchorSuggestions);
+
+    anchorInput.addEventListener("input", () => {
+      const value = anchorInput.value.trim();
+      if (!value || !pageInput) return;
+
+      if (pageInput.value.trim()) return;
+
+      const matchedPage = findPageByKeyword(value);
+      if (matchedPage) {
+        pageInput.value = matchedPage.url;
+      }
+    });
+  }
+  ensureCopyOutboundButton();
+}
 
 function renderIncomingLinks(pageId) {
   const tbody = document.getElementById("incoming-links-body");

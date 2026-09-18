@@ -2900,6 +2900,61 @@ input[type="number"] {
   color: var(--muted);
 }
 
+/* :::::::::::::::::::::::::: OUTBOUND LINK LIMIT :::::::::::::::::::::::::: */
+
+.suggestion-item.within-limit {
+  border-color: rgba(78, 205, 196, 0.5);
+  background: rgba(78, 205, 196, 0.06);
+}
+
+.suggestion-item.over-limit {
+  border-color: rgba(255, 107, 107, 0.55);
+  background: rgba(255, 107, 107, 0.06);
+}
+
+/* :::::::::::::::::::::::::: COPY OUTBOUND BUTTON :::::::::::::::::::::::::: */
+.suggestions-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.suggestions-title-row .suggestions-title {
+  margin: 0;
+}
+
+.copy-outbound-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.copy-outbound-btn:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: rgba(255, 143, 209, 0.08);
+}
+
+.copy-outbound-btn:active {
+  transform: scale(0.95);
+}
+
+.copy-outbound-btn svg {
+  width: 14px;
+  height: 14px;
+}
 /* :::::::::::::::::::::::::: MOBILE RESPONSIVE :::::::::::::::::::::::::: */
 @media (max-width: 768px) {
   .gauge-slider::-webkit-scrollbar {
