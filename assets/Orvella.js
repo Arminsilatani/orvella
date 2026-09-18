@@ -149,6 +149,41 @@
   let currentFolderPath = "/";
   let gaugeAnimationStarted = false;
 
+  const DIRTY_TRACKED_MODALS = new Set([
+  "addPageModal",
+  "editPageModal",
+  "settingsModal",
+]);
+
+const dirtyModals = new Set();
+let pendingCloseModal = null;
+
+function markModalDirty(modal) {
+  if (!modal || !modal.id) return;
+  if (!DIRTY_TRACKED_MODALS.has(modal.id)) return;
+  dirtyModals.add(modal.id);
+}
+
+function clearModalDirty(modal) {
+  if (!modal || !modal.id) return;
+  dirtyModals.delete(modal.id);
+}
+
+function isModalDirty(modal) {
+  return modal && dirtyModals.has(modal.id);
+}
+
+function requestCloseModal(modal) {
+  if (!modal) return;
+  if (isModalDirty(modal)) {
+    pendingCloseModal = modal;
+    const confirmModal = document.getElementById("unsavedChangesModal");
+    confirmModal.style.display = "flex";
+    return;
+  }
+  closeModal(modal);
+}
+
   /* :::::::::::::::::::::::::: DUPLICATE URL MERGE STATE :::::::::::::::::::::::::: */
   let pendingMergeData = null;
 
@@ -847,6 +882,7 @@ async function refreshData() {
   }
 
   function openModal(modal) {
+    clearModalDirty(modal);
     modal.style.display = "flex";
     document.body.classList.add("modal-open");
     const scrollableContent = modal.querySelector(
@@ -857,11 +893,12 @@ async function refreshData() {
     }
   }
 
-  function closeModal(modal) {
-    modal.style.display = "none";
-    document.body.classList.remove("modal-open");
-    if (modal === elements.editPageModal) editingPageId = null;
-  }
+function closeModal(modal) {
+  modal.style.display = "none";
+  document.body.classList.remove("modal-open");
+  clearModalDirty(modal);
+  if (modal === elements.editPageModal) editingPageId = null;
+}
 
   async function buildCurrentProfile(user) {
     const { data: profileRow } = await supabase
@@ -3933,18 +3970,18 @@ function getDensityStatus(density) {
       elements.wordCount.classList.remove("field-error"),
     );
 
-    document.addEventListener("click", (e) => {
-      const modal = e.target.closest(".modal");
-      if (modal && e.target === modal) closeModal(modal);
-    });
+document.addEventListener("click", (e) => {
+  const modal = e.target.closest(".modal");
+  if (modal && e.target === modal) requestCloseModal(modal);
+});
 
-    document.addEventListener("click", (e) => {
-      const closeBtn = e.target.closest(".close-modal");
-      if (closeBtn) {
-        const modal = closeBtn.closest(".modal");
-        if (modal) closeModal(modal);
-      }
-    });
+document.addEventListener("click", (e) => {
+  const closeBtn = e.target.closest(".close-modal");
+  if (closeBtn) {
+    const modal = closeBtn.closest(".modal");
+    if (modal) requestCloseModal(modal);
+  }
+});
 
     elements.newLanguageInput.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
@@ -4002,7 +4039,6 @@ function getDensityStatus(density) {
         });
       });
 
-    // Duplicate URL merge modal events
     document.getElementById("cancelMergeBtn")?.addEventListener("click", () => {
       closeModal(document.getElementById("duplicateUrlModal"));
       pendingMergeData = null;
@@ -4011,6 +4047,43 @@ function getDensityStatus(density) {
     document
       .getElementById("confirmMergeBtn")
       ?.addEventListener("click", confirmMerge);
+
+    document.addEventListener("input", (e) => {
+  const modal = e.target.closest(".modal");
+  if (modal) markModalDirty(modal);
+});
+
+document.addEventListener("change", (e) => {
+  const modal = e.target.closest(".modal");
+  if (modal) markModalDirty(modal);
+});
+
+document.addEventListener("click", (e) => {
+  const modal = e.target.closest(".modal");
+  if (!modal) return;
+  if (e.target.closest(".priority-option, .toggle-switch, .link-type-option")) {
+    markModalDirty(modal);
+  }
+});
+
+document
+  .getElementById("cancelUnsavedBtn")
+  ?.addEventListener("click", () => {
+    document.getElementById("unsavedChangesModal").style.display = "none";
+    pendingCloseModal = null;
+  });
+
+document
+  .getElementById("discardUnsavedBtn")
+  ?.addEventListener("click", () => {
+    const modalToClose = pendingCloseModal;
+    pendingCloseModal = null;
+    document.getElementById("unsavedChangesModal").style.display = "none";
+    if (modalToClose) {
+      clearModalDirty(modalToClose);
+      closeModal(modalToClose);
+    }
+  });
   }
 
   /* :::::::::::::::::::::::::: STATUS PILL GLOBAL LISTENER :::::::::::::::::::::::::: */

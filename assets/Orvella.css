@@ -2955,6 +2955,10 @@ input[type="number"] {
   width: 14px;
   height: 14px;
 }
+
+#unsavedChangesModal {
+  z-index: 10;
+}
 /* :::::::::::::::::::::::::: MOBILE RESPONSIVE :::::::::::::::::::::::::: */
 @media (max-width: 768px) {
   .gauge-slider::-webkit-scrollbar {
